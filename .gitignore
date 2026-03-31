@@ -1,0 +1,5 @@
+node_modules/
+.next/
+test-output.docx
+test-parse.mjs
+tsconfig.tsbuildinfo
