@@ -1,22 +1,18 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import type {
-  TaskItem,
-  ContentLine,
-  MemberData,
-  ReportData,
-  ReportMode,
-} from "@/lib/types";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
+import type { TaskItem, ContentLine, MemberData, ReportData, ReportMode } from "@/lib/types";
+import { createEmptyTask, createEmptyMember, generateFileName, getTodayLocal } from "@/lib/types";
 import {
-  createEmptyTask,
-  createEmptyMember,
-  generateFileName,
-  getTodayLocal,
-} from "@/lib/types";
+  loadPersistedReport,
+  clearPersistedReport,
+  usePersistReport,
+} from "@/hooks/useFormPersistence";
 import TaskCard from "@/components/TaskCard";
 import MemberCard from "@/components/MemberCard";
 import PreviewTable from "@/components/PreviewTable";
+import MetaSection from "@/components/MetaSection";
 
 type DownloadType = "docx" | "pdf" | null;
 
@@ -27,12 +23,8 @@ export default function Home() {
   const [authorName, setAuthorName] = useState("");
 
   // 사원 모드
-  const [thisWeekTasks, setThisWeekTasks] = useState<TaskItem[]>([
-    createEmptyTask(),
-  ]);
-  const [nextWeekTasks, setNextWeekTasks] = useState<TaskItem[]>([
-    createEmptyTask(),
-  ]);
+  const [thisWeekTasks, setThisWeekTasks] = useState<TaskItem[]>([createEmptyTask()]);
+  const [nextWeekTasks, setNextWeekTasks] = useState<TaskItem[]>([createEmptyTask()]);
 
   // 팀장 모드
   const [members, setMembers] = useState<MemberData[]>([createEmptyMember()]);
@@ -56,6 +48,38 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 마운트 시 localStorage에서 폼 상태 복원.
+  // SSR 안전: 서버는 localStorage 없음 → 빈 폼 → 클라 마운트 후 복원.
+  // 17개 setState 호출은 page.tsx 분해 시 단일 state 객체로 통합 예정.
+  useEffect(() => {
+    const persisted = loadPersistedReport();
+    if (!persisted) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- 마운트 시 클라 전용 외부 상태(localStorage) 1회 복원 */
+    setMode(persisted.mode);
+    setMeetingDate(persisted.meetingDate || getTodayLocal());
+    setTeamName(persisted.teamName);
+    setAuthorName(persisted.authorName);
+    setThisWeekTasks(
+      persisted.thisWeekTasks.length > 0 ? persisted.thisWeekTasks : [createEmptyTask()]
+    );
+    setNextWeekTasks(
+      persisted.nextWeekTasks.length > 0 ? persisted.nextWeekTasks : [createEmptyTask()]
+    );
+    setMembers(persisted.members.length > 0 ? persisted.members : [createEmptyMember()]);
+    setTargetBusiness(persisted.targetBusiness);
+    setRequestTeam(persisted.requestTeam);
+    setDevPeriodFrom(persisted.devPeriodFrom);
+    setDevPeriodTo(persisted.devPeriodTo);
+    setNextTargetBusiness(persisted.nextTargetBusiness);
+    setNextRequestTeam(persisted.nextRequestTeam);
+    setNextDevPeriodFrom(persisted.nextDevPeriodFrom);
+    setNextDevPeriodTo(persisted.nextDevPeriodTo);
+    setIssues(persisted.issues);
+    setEtc(persisted.etc);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    toast.info("이전 작성 내용을 불러왔습니다.");
+  }, []);
+
   const reportData: ReportData = {
     mode,
     meetingDate,
@@ -76,55 +100,68 @@ export default function Home() {
     etc,
   };
 
+  // 폼 변경 시 디바운스(500ms) 자동 저장
+  usePersistReport(reportData);
+
   // ==================== 사원 모드 핸들러 ====================
-  const updateThisWeekField = useCallback(
-    (id: string, field: string, value: string) => {
-      setThisWeekTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
-      );
-    },
-    []
-  );
-  const updateThisWeekContentLines = useCallback(
-    (id: string, lines: ContentLine[]) => {
-      setThisWeekTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, contentLines: lines } : t))
-      );
-    },
-    []
-  );
+  const updateThisWeekField = useCallback((id: string, field: string, value: string) => {
+    setThisWeekTasks((prev) => prev.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
+  }, []);
+  const updateThisWeekContentLines = useCallback((id: string, lines: ContentLine[]) => {
+    setThisWeekTasks((prev) => prev.map((t) => (t.id === id ? { ...t, contentLines: lines } : t)));
+  }, []);
   const addThisWeekTask = useCallback(() => {
     setThisWeekTasks((prev) => [...prev, createEmptyTask()]);
   }, []);
   const removeThisWeekTask = useCallback((id: string) => {
-    setThisWeekTasks((prev) =>
-      prev.length <= 1 ? prev : prev.filter((t) => t.id !== id)
-    );
+    setThisWeekTasks((prev) => (prev.length <= 1 ? prev : prev.filter((t) => t.id !== id)));
   }, []);
 
-  const updateNextWeekField = useCallback(
-    (id: string, field: string, value: string) => {
-      setNextWeekTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
-      );
-    },
-    []
-  );
-  const updateNextWeekContentLines = useCallback(
-    (id: string, lines: ContentLine[]) => {
-      setNextWeekTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, contentLines: lines } : t))
-      );
-    },
-    []
-  );
+  const updateNextWeekField = useCallback((id: string, field: string, value: string) => {
+    setNextWeekTasks((prev) => prev.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
+  }, []);
+  const updateNextWeekContentLines = useCallback((id: string, lines: ContentLine[]) => {
+    setNextWeekTasks((prev) => prev.map((t) => (t.id === id ? { ...t, contentLines: lines } : t)));
+  }, []);
   const addNextWeekTask = useCallback(() => {
     setNextWeekTasks((prev) => [...prev, createEmptyTask()]);
   }, []);
   const removeNextWeekTask = useCallback((id: string) => {
-    setNextWeekTasks((prev) =>
-      prev.length <= 1 ? prev : prev.filter((t) => t.id !== id)
-    );
+    setNextWeekTasks((prev) => (prev.length <= 1 ? prev : prev.filter((t) => t.id !== id)));
+  }, []);
+
+  // ==================== 메타 핸들러 ====================
+  const handleThisMetaChange = useCallback((field: string, value: string) => {
+    switch (field) {
+      case "targetBusiness":
+        setTargetBusiness(value);
+        break;
+      case "requestTeam":
+        setRequestTeam(value);
+        break;
+      case "devPeriodFrom":
+        setDevPeriodFrom(value);
+        break;
+      case "devPeriodTo":
+        setDevPeriodTo(value);
+        break;
+    }
+  }, []);
+  const handleNextMetaChange = useCallback((field: string, value: string) => {
+    switch (field) {
+      case "targetBusiness":
+        setNextTargetBusiness(value);
+        break;
+      case "requestTeam":
+        setNextRequestTeam(value);
+        break;
+      case "devPeriodFrom":
+        setNextDevPeriodFrom(value);
+        break;
+      case "devPeriodTo":
+        setNextDevPeriodTo(value);
+        break;
+    }
   }, []);
 
   // ==================== 팀장 모드 핸들러 ====================
@@ -132,18 +169,11 @@ export default function Home() {
     setMembers((prev) => [...prev, createEmptyMember()]);
   }, []);
   const removeMember = useCallback((id: string) => {
-    setMembers((prev) =>
-      prev.length <= 1 ? prev : prev.filter((m) => m.id !== id)
-    );
+    setMembers((prev) => (prev.length <= 1 ? prev : prev.filter((m) => m.id !== id)));
   }, []);
-  const updateMember = useCallback(
-    (id: string, updated: Partial<MemberData>) => {
-      setMembers((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, ...updated } : m))
-      );
-    },
-    []
-  );
+  const updateMember = useCallback((id: string, updated: Partial<MemberData>) => {
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, ...updated } : m)));
+  }, []);
 
   // ==================== 공통 핸들러 ====================
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,13 +220,11 @@ export default function Home() {
       setIssues(data.issues || "");
       setEtc(data.etc || "");
 
-      alert("이전 보고서를 불러왔습니다. 내용을 확인하고 수정해주세요.");
+      toast.success("이전 보고서를 불러왔습니다. 내용을 확인하고 수정해주세요.");
     } catch (error) {
       console.error(error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "파일을 불러오는 중 오류가 발생했습니다."
+      toast.error(
+        error instanceof Error ? error.message : "파일을 불러오는 중 오류가 발생했습니다."
       );
     } finally {
       setUploading(false);
@@ -205,25 +233,31 @@ export default function Home() {
   };
 
   const resetForm = () => {
-    if (confirm("모든 입력 내용을 초기화하시겠습니까?")) {
-      setMeetingDate(getTodayLocal());
-      setTeamName("");
-      setAuthorName("");
-      setThisWeekTasks([createEmptyTask()]);
-      setNextWeekTasks([createEmptyTask()]);
-      setMembers([createEmptyMember()]);
-      setTargetBusiness("");
-      setRequestTeam("");
-      setDevPeriodFrom("");
-      setDevPeriodTo("");
-      setNextTargetBusiness("");
-      setNextRequestTeam("");
-      setNextDevPeriodFrom("");
-      setNextDevPeriodTo("");
-      setIssues("");
-      setEtc("");
-      setShowPreview(false);
-    }
+    toast("모든 입력 내용을 초기화하시겠습니까?", {
+      action: {
+        label: "초기화",
+        onClick: () => {
+          clearPersistedReport();
+          setMeetingDate(getTodayLocal());
+          setTeamName("");
+          setAuthorName("");
+          setThisWeekTasks([createEmptyTask()]);
+          setNextWeekTasks([createEmptyTask()]);
+          setMembers([createEmptyMember()]);
+          setTargetBusiness("");
+          setRequestTeam("");
+          setDevPeriodFrom("");
+          setDevPeriodTo("");
+          setNextTargetBusiness("");
+          setNextRequestTeam("");
+          setNextDevPeriodFrom("");
+          setNextDevPeriodTo("");
+          setIssues("");
+          setEtc("");
+          setShowPreview(false);
+        },
+      },
+    });
   };
 
   const handleDownloadDocx = async () => {
@@ -246,7 +280,7 @@ export default function Home() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      alert("DOCX 파일 생성 중 오류가 발생했습니다.");
+      toast.error("DOCX 파일 생성 중 오류가 발생했습니다.");
     } finally {
       setDownloading(null);
     }
@@ -265,14 +299,32 @@ export default function Home() {
         backgroundColor: "#ffffff",
       });
       const imgData = canvas.toDataURL("image/png");
+
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidthMm = pageWidth;
+      const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+
+      // 다중 페이지: 같은 이미지를 음수 y-offset으로 반복 배치하면
+      // PDF가 페이지 경계 밖을 자동 클립해서 페이지 분할 효과.
+      let heightLeft = imgHeightMm;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidthMm, imgHeightMm);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidthMm, imgHeightMm);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(generateFileName(reportData, "pdf"));
     } catch (error) {
       console.error(error);
-      alert("PDF 파일 생성 중 오류가 발생했습니다.");
+      toast.error("PDF 파일 생성 중 오류가 발생했습니다.");
     } finally {
       setDownloading(null);
     }
@@ -281,35 +333,34 @@ export default function Home() {
   // ==================== PREVIEW MODE ====================
   if (showPreview) {
     return (
-      <div className="max-w-[1100px] mx-auto p-6">
-        <div className="flex justify-between items-center mb-6 flex-wrap gap-3 no-print">
+      <div className="mx-auto max-w-[1100px] p-6">
+        <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={() => setShowPreview(false)}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm cursor-pointer"
+            className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           >
             ← 편집으로 돌아가기
           </button>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={handleDownloadDocx}
               disabled={downloading === "docx"}
-              className="px-4 py-2 bg-[#2b579a] text-white rounded-lg hover:bg-[#1e3f6f] transition-colors text-sm disabled:opacity-60 cursor-pointer"
+              className="cursor-pointer rounded-lg bg-[#2b579a] px-4 py-2 text-sm text-white transition-colors hover:bg-[#1e3f6f] disabled:opacity-60"
             >
               {downloading === "docx" ? "⏳ 생성 중..." : "📄 .docx 다운로드"}
             </button>
             <button
               onClick={handleDownloadPdf}
               disabled={downloading === "pdf"}
-              className="px-4 py-2 bg-[#d32f2f] text-white rounded-lg hover:bg-[#b71c1c] transition-colors text-sm disabled:opacity-60 cursor-pointer"
+              className="cursor-pointer rounded-lg bg-[#d32f2f] px-4 py-2 text-sm text-white transition-colors hover:bg-[#b71c1c] disabled:opacity-60"
             >
               {downloading === "pdf" ? "⏳ 생성 중..." : "📕 .pdf 다운로드"}
             </button>
           </div>
         </div>
         <PreviewTable data={reportData} />
-        <p className="text-center text-gray-400 text-xs mt-4 no-print">
-          미리보기 화면입니다. 다운로드 버튼을 클릭하면 원본 양식과 동일한 파일이
-          생성됩니다.
+        <p className="no-print mt-4 text-center text-xs text-gray-400">
+          미리보기 화면입니다. 다운로드 버튼을 클릭하면 원본 양식과 동일한 파일이 생성됩니다.
         </p>
       </div>
     );
@@ -317,13 +368,11 @@ export default function Home() {
 
   // ==================== EDIT MODE ====================
   return (
-    <div className="max-w-[1800px] mx-auto p-6">
+    <div className="mx-auto max-w-[1800px] p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-7 flex-wrap gap-3">
+      <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 mb-1">
-            주간업무 보고서
-          </h1>
+          <h1 className="mb-1 text-2xl font-extrabold text-gray-900">주간업무 보고서</h1>
           <p className="text-sm text-gray-500">
             웹에서 간편하게 작성하고, .docx / .pdf 파일로 다운로드하세요
           </p>
@@ -339,19 +388,19 @@ export default function Home() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors text-sm cursor-pointer disabled:opacity-60"
+            className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-60"
           >
             {uploading ? "⏳ 불러오는 중..." : "📂 이전 보고서 불러오기"}
           </button>
           <button
             onClick={resetForm}
-            className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors text-sm cursor-pointer"
+            className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-50"
           >
             ↻ 초기화
           </button>
           <button
             onClick={() => setShowPreview(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium cursor-pointer"
+            className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
             미리보기 →
           </button>
@@ -359,11 +408,11 @@ export default function Home() {
       </div>
 
       {/* 양식 전환 토글 */}
-      <div className="flex justify-center mb-5">
-        <div className="inline-flex bg-gray-100 rounded-lg p-1">
+      <div className="mb-5 flex justify-center">
+        <div className="inline-flex rounded-lg bg-gray-100 p-1">
           <button
             onClick={() => setMode("employee")}
-            className={`px-5 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+            className={`cursor-pointer rounded-md px-5 py-2 text-sm font-medium transition-colors ${
               mode === "employee"
                 ? "bg-white text-blue-600 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
@@ -373,7 +422,7 @@ export default function Home() {
           </button>
           <button
             onClick={() => setMode("leader")}
-            className={`px-5 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+            className={`cursor-pointer rounded-md px-5 py-2 text-sm font-medium transition-colors ${
               mode === "leader"
                 ? "bg-white text-indigo-600 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
@@ -385,46 +434,40 @@ export default function Home() {
       </div>
 
       {/* 기본 정보 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
-        <div className="text-sm font-bold text-blue-600 bg-blue-50 rounded-lg px-4 py-2.5 mb-4 flex items-center gap-2">
+      <div className="mb-5 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-600">
           📋 기본 정보
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
-            <label className="text-xs font-semibold text-gray-700 mb-1 block">
-              회의기준일
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">회의기준일</label>
             <input
               type="date"
               value={meetingDate}
               onChange={(e) => setMeetingDate(e.target.value)}
-              className="w-full p-2.5 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors"
+              className="w-full rounded-md border border-gray-200 p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-700 mb-1 block">
-              팀명
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">팀명</label>
             <input
               type="text"
               placeholder="예: 개발2팀"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
-              className="w-full p-2.5 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors"
+              className="w-full rounded-md border border-gray-200 p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-700 mb-1 block">
+            <label className="mb-1 block text-xs font-semibold text-gray-700">
               {mode === "employee" ? "이름" : "팀장 이름"}
             </label>
             <input
               type="text"
-              placeholder={
-                mode === "employee" ? "예: 전병일" : "예: 홍길동"
-              }
+              placeholder={mode === "employee" ? "예: 전병일" : "예: 홍길동"}
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              className="w-full p-2.5 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors"
+              className="w-full rounded-md border border-gray-200 p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -433,14 +476,14 @@ export default function Home() {
       {/* ====== 사원 모드 ====== */}
       {mode === "employee" && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+          <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
             {/* 금주 실적 */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="text-sm font-bold text-blue-600 bg-blue-50 rounded-lg px-4 py-2.5 mb-4 flex items-center justify-between">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center justify-between rounded-lg bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-600">
                 <span className="flex items-center gap-2">📝 금주 실적</span>
                 <button
                   onClick={addThisWeekTask}
-                  className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors font-medium cursor-pointer"
+                  className="cursor-pointer rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                 >
                   + 업무 추가
                 </button>
@@ -459,64 +502,22 @@ export default function Home() {
                 />
               ))}
 
-              {/* 대상업무 / 의뢰팀 / 개발기간 */}
-              <div className="border-t border-gray-200 pt-4 mt-2">
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">
-                      대상업무
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="예: kt비즈메카"
-                      value={targetBusiness}
-                      onChange={(e) => setTargetBusiness(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">
-                      의뢰팀
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="예: 기획팀"
-                      value={requestTeam}
-                      onChange={(e) => setRequestTeam(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">
-                    개발기간
-                  </label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="date"
-                      value={devPeriodFrom}
-                      onChange={(e) => setDevPeriodFrom(e.target.value)}
-                      className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors min-w-0"
-                    />
-                    <span className="text-gray-400 text-xs">~</span>
-                    <input
-                      type="date"
-                      value={devPeriodTo}
-                      onChange={(e) => setDevPeriodTo(e.target.value)}
-                      className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors min-w-0"
-                    />
-                  </div>
-                </div>
+              <div className="mt-2 border-t border-gray-200 pt-4">
+                <MetaSection
+                  values={{ targetBusiness, requestTeam, devPeriodFrom, devPeriodTo }}
+                  accent="blue"
+                  onChange={handleThisMetaChange}
+                />
               </div>
             </div>
 
             {/* 차주 계획 */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <div className="text-sm font-bold text-emerald-600 bg-emerald-50 rounded-lg px-4 py-2.5 mb-4 flex items-center justify-between">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="mb-4 flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-600">
                 <span className="flex items-center gap-2">📅 차주 계획</span>
                 <button
                   onClick={addNextWeekTask}
-                  className="bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-emerald-700 transition-colors font-medium cursor-pointer"
+                  className="cursor-pointer rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
                 >
                   + 업무 추가
                 </button>
@@ -535,54 +536,17 @@ export default function Home() {
                 />
               ))}
 
-              {/* 차주 대상업무 / 의뢰팀 / 개발기간 */}
-              <div className="border-t border-gray-200 pt-4 mt-2">
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">
-                      대상업무
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="예: kt비즈메카"
-                      value={nextTargetBusiness}
-                      onChange={(e) => setNextTargetBusiness(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">
-                      의뢰팀
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="예: 기획팀"
-                      value={nextRequestTeam}
-                      onChange={(e) => setNextRequestTeam(e.target.value)}
-                      className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">
-                    개발기간
-                  </label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="date"
-                      value={nextDevPeriodFrom}
-                      onChange={(e) => setNextDevPeriodFrom(e.target.value)}
-                      className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors min-w-0"
-                    />
-                    <span className="text-gray-400 text-xs">~</span>
-                    <input
-                      type="date"
-                      value={nextDevPeriodTo}
-                      onChange={(e) => setNextDevPeriodTo(e.target.value)}
-                      className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors min-w-0"
-                    />
-                  </div>
-                </div>
+              <div className="mt-2 border-t border-gray-200 pt-4">
+                <MetaSection
+                  values={{
+                    targetBusiness: nextTargetBusiness,
+                    requestTeam: nextRequestTeam,
+                    devPeriodFrom: nextDevPeriodFrom,
+                    devPeriodTo: nextDevPeriodTo,
+                  }}
+                  accent="emerald"
+                  onChange={handleNextMetaChange}
+                />
               </div>
             </div>
           </div>
@@ -592,12 +556,12 @@ export default function Home() {
       {/* ====== 팀장 모드 ====== */}
       {mode === "leader" && (
         <div className="mb-5">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="text-sm font-bold text-indigo-600 bg-indigo-50 rounded-lg px-4 py-2.5 mb-4 flex items-center justify-between">
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="mb-4 flex items-center justify-between rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
               <span className="flex items-center gap-2">👥 팀원별 업무</span>
               <button
                 onClick={addMember}
-                className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-indigo-700 transition-colors font-medium cursor-pointer"
+                className="cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
               >
                 + 팀원 추가
               </button>
@@ -613,51 +577,27 @@ export default function Home() {
               />
             ))}
 
-            {/* 금주/차주 대상업무/의뢰팀/개발기간 */}
-            <div className="border-t border-gray-200 pt-4 mt-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* 금주 메타 */}
-              <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
-                <span className="text-xs font-bold text-blue-600 mb-3 block">금주 실적</span>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">대상업무</label>
-                    <input type="text" placeholder="예: kt비즈메카" value={targetBusiness} onChange={(e) => setTargetBusiness(e.target.value)} className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">의뢰팀</label>
-                    <input type="text" placeholder="예: 기획팀" value={requestTeam} onChange={(e) => setRequestTeam(e.target.value)} className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">개발기간</label>
-                  <div className="flex items-center gap-1">
-                    <input type="date" value={devPeriodFrom} onChange={(e) => setDevPeriodFrom(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors min-w-0" />
-                    <span className="text-gray-400 text-xs">~</span>
-                    <input type="date" value={devPeriodTo} onChange={(e) => setDevPeriodTo(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-blue-500 outline-none transition-colors min-w-0" />
-                  </div>
-                </div>
+            <div className="mt-2 grid grid-cols-1 gap-4 border-t border-gray-200 pt-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                <span className="mb-3 block text-xs font-bold text-blue-600">금주 실적</span>
+                <MetaSection
+                  values={{ targetBusiness, requestTeam, devPeriodFrom, devPeriodTo }}
+                  accent="blue"
+                  onChange={handleThisMetaChange}
+                />
               </div>
-              {/* 차주 메타 */}
-              <div className="bg-emerald-50/50 rounded-lg p-4 border border-emerald-100">
-                <span className="text-xs font-bold text-emerald-600 mb-3 block">차주 계획</span>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">대상업무</label>
-                    <input type="text" placeholder="예: kt비즈메카" value={nextTargetBusiness} onChange={(e) => setNextTargetBusiness(e.target.value)} className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 mb-1 block">의뢰팀</label>
-                    <input type="text" placeholder="예: 기획팀" value={nextRequestTeam} onChange={(e) => setNextRequestTeam(e.target.value)} className="w-full p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">개발기간</label>
-                  <div className="flex items-center gap-1">
-                    <input type="date" value={nextDevPeriodFrom} onChange={(e) => setNextDevPeriodFrom(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors min-w-0" />
-                    <span className="text-gray-400 text-xs">~</span>
-                    <input type="date" value={nextDevPeriodTo} onChange={(e) => setNextDevPeriodTo(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-md text-sm focus:border-emerald-500 outline-none transition-colors min-w-0" />
-                  </div>
-                </div>
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-4">
+                <span className="mb-3 block text-xs font-bold text-emerald-600">차주 계획</span>
+                <MetaSection
+                  values={{
+                    targetBusiness: nextTargetBusiness,
+                    requestTeam: nextRequestTeam,
+                    devPeriodFrom: nextDevPeriodFrom,
+                    devPeriodTo: nextDevPeriodTo,
+                  }}
+                  accent="emerald"
+                  onChange={handleNextMetaChange}
+                />
               </div>
             </div>
           </div>
@@ -665,30 +605,26 @@ export default function Home() {
       )}
 
       {/* 주요이슈 & 기타 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <div className="text-sm font-bold text-blue-600 bg-blue-50 rounded-lg px-4 py-2.5 mb-4 flex items-center gap-2">
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-600">
           💡 주요이슈 & 기타
         </div>
         <div className="mb-4">
-          <label className="text-xs font-semibold text-gray-700 mb-1 block">
-            주요이슈
-          </label>
+          <label className="mb-1 block text-xs font-semibold text-gray-700">주요이슈</label>
           <textarea
             placeholder="이번 주 주요 이슈 사항을 입력하세요"
             value={issues}
             onChange={(e) => setIssues(e.target.value)}
-            className="w-full min-h-[80px] p-2.5 border border-gray-200 rounded-md text-sm resize-y focus:border-blue-500 outline-none transition-colors"
+            className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-gray-700 mb-1 block">
-            기타
-          </label>
+          <label className="mb-1 block text-xs font-semibold text-gray-700">기타</label>
           <textarea
             placeholder="기타 사항을 입력하세요"
             value={etc}
             onChange={(e) => setEtc(e.target.value)}
-            className="w-full min-h-[80px] p-2.5 border border-gray-200 rounded-md text-sm resize-y focus:border-blue-500 outline-none transition-colors"
+            className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
           />
         </div>
       </div>
@@ -697,14 +633,14 @@ export default function Home() {
       <div className="flex justify-center py-4">
         <button
           onClick={() => setShowPreview(true)}
-          className="px-7 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-semibold cursor-pointer"
+          className="cursor-pointer rounded-lg bg-blue-600 px-7 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700"
         >
           미리보기 & 다운로드 →
         </button>
       </div>
-      <p className="text-center text-gray-400 text-xs mt-2 mb-8">
-        작성 후 &apos;미리보기&apos;에서 원본 양식과 동일한 .docx 또는 .pdf로
-        다운로드할 수 있습니다.
+      <p className="mt-2 mb-8 text-center text-xs text-gray-400">
+        작성 후 &apos;미리보기&apos;에서 원본 양식과 동일한 .docx 또는 .pdf로 다운로드할 수
+        있습니다.
       </p>
     </div>
   );

@@ -52,9 +52,7 @@ function renderMetaFrom(
   if (targetBusiness) lines.push(`대상업무 : ${targetBusiness}`);
   if (requestTeam) lines.push(` 의뢰팀 : ${requestTeam}`);
   if (devPeriodFrom || devPeriodTo)
-    lines.push(
-      ` 개발기간 : ${devPeriodFrom || ""}~${devPeriodTo || ""}`
-    );
+    lines.push(` 개발기간 : ${devPeriodFrom || ""}~${devPeriodTo || ""}`);
   return lines.length > 0 ? "\n\n" + lines.join("\n") : "";
 }
 
@@ -85,11 +83,8 @@ export default function PreviewTable({ data }: PreviewTableProps) {
   const isLeader = data.mode === "leader";
 
   return (
-    <div
-      id="preview-content"
-      className="bg-white p-10 border border-gray-300 rounded shadow-sm"
-    >
-      <h1 className="text-xl font-bold underline mb-5">주간업무</h1>
+    <div id="preview-content" className="rounded border border-gray-300 bg-white p-10 shadow-sm">
+      <h1 className="mb-5 text-xl font-bold underline">주간업무</h1>
 
       <table className="w-full border-collapse text-xs">
         <tbody>
@@ -98,21 +93,14 @@ export default function PreviewTable({ data }: PreviewTableProps) {
             <td className={thClass} style={{ width: "100px" }}>
               회의기준일
             </td>
-            <td
-              className={`${tdClass} text-center`}
-              style={{ width: "320px" }}
-            >
-              {data.meetingDate
-                ? `${data.meetingDate} (${getDayOfWeek(data.meetingDate)})`
-                : "-"}
+            <td className={`${tdClass} text-center`} style={{ width: "320px" }}>
+              {data.meetingDate ? `${data.meetingDate} (${getDayOfWeek(data.meetingDate)})` : "-"}
             </td>
             <td className={thClass} style={{ width: "80px" }}>
               팀명/이름
             </td>
             <td className={`${tdClass} text-center`}>
-              {data.teamName || data.authorName
-                ? `${data.teamName} / ${data.authorName}`
-                : "-"}
+              {data.teamName || data.authorName ? `${data.teamName} / ${data.authorName}` : "-"}
             </td>
           </tr>
 
@@ -133,11 +121,7 @@ export default function PreviewTable({ data }: PreviewTableProps) {
                 {renderTasks(data.thisWeekTasks)}
                 {renderMeta(data)}
               </td>
-              <td
-                colSpan={2}
-                className={tdClass}
-                style={{ minHeight: "300px" }}
-              >
+              <td colSpan={2} className={tdClass} style={{ minHeight: "300px" }}>
                 {renderTasks(data.nextWeekTasks)}
                 {renderNextMeta(data)}
               </td>
@@ -148,12 +132,8 @@ export default function PreviewTable({ data }: PreviewTableProps) {
           {isLeader &&
             data.members.map((member) => (
               <tr key={member.id}>
-                <td className={`${thClass} text-[11px]`}>
-                  {member.name || "(이름)"}
-                </td>
-                <td className={tdClass}>
-                  {renderTasks(member.thisWeekTasks)}
-                </td>
+                <td className={`${thClass} text-[11px]`}>{member.name || "(이름)"}</td>
+                <td className={tdClass}>{renderTasks(member.thisWeekTasks)}</td>
                 <td colSpan={2} className={tdClass}>
                   {renderTasks(member.nextWeekTasks)}
                 </td>
@@ -175,9 +155,7 @@ export default function PreviewTable({ data }: PreviewTableProps) {
             <td className={thClass} style={{ height: "50px" }}>
               주요이슈
             </td>
-            <td className={`${tdClass} min-h-[40px]`}>
-              {data.issues || ""}
-            </td>
+            <td className={`${tdClass} min-h-[40px]`}>{data.issues || ""}</td>
             <td colSpan={2} className={`${tdClass} min-h-[40px]`}></td>
           </tr>
 

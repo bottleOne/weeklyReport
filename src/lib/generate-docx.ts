@@ -115,9 +115,7 @@ function buildTaskParagraphs(tasks: TaskItem[]): Paragraph[] {
     paragraphs.push(
       new Paragraph({
         spacing: CELL_SPACING,
-        children: [
-          new TextRun({ text: `${idx + 1}. ${task.title || ""}`, size: FONT_SIZE }),
-        ],
+        children: [new TextRun({ text: `${idx + 1}. ${task.title || ""}`, size: FONT_SIZE })],
       })
     );
 
@@ -146,9 +144,7 @@ function buildTaskParagraphs(tasks: TaskItem[]): Paragraph[] {
             new Paragraph({
               spacing: CELL_SPACING,
               indent: { left: 760, hanging: 360 },
-              children: [
-                new TextRun({ text: `${contentNum}) ${mainText}`, size: FONT_SIZE }),
-              ],
+              children: [new TextRun({ text: `${contentNum}) ${mainText}`, size: FONT_SIZE })],
             })
           );
         }
@@ -162,9 +158,7 @@ function buildTaskParagraphs(tasks: TaskItem[]): Paragraph[] {
               new Paragraph({
                 spacing: CELL_SPACING,
                 indent: { left: 400, firstLine: 320 },
-                children: [
-                  new TextRun({ text: subText, size: FONT_SIZE }),
-                ],
+                children: [new TextRun({ text: subText, size: FONT_SIZE })],
               })
             );
           }
@@ -263,9 +257,7 @@ function buildCommonRows(data: ReportData) {
       children: [
         headerCell("회의기준일", COL1),
         valueCell(
-          data.meetingDate
-            ? `${data.meetingDate} (${getDayOfWeek(data.meetingDate)})`
-            : "",
+          data.meetingDate ? `${data.meetingDate} (${getDayOfWeek(data.meetingDate)})` : "",
           COL2
         ),
         headerCell("팀명/이름", COL3),
@@ -291,9 +283,7 @@ function buildCommonRows(data: ReportData) {
           children: [
             new Paragraph({
               spacing: CELL_SPACING,
-              children: [
-                new TextRun({ text: data.issues || "", size: FONT_SIZE }),
-              ],
+              children: [new TextRun({ text: data.issues || "", size: FONT_SIZE })],
             }),
           ],
         }),
@@ -322,9 +312,7 @@ function buildCommonRows(data: ReportData) {
           children: [
             new Paragraph({
               spacing: CELL_SPACING,
-              children: [
-                new TextRun({ text: data.etc || "", size: FONT_SIZE }),
-              ],
+              children: [new TextRun({ text: data.etc || "", size: FONT_SIZE })],
             }),
           ],
         }),
@@ -368,9 +356,7 @@ function buildEmployeeTaskRow(data: ReportData): TableRow {
           new Paragraph({
             spacing: CELL_SPACING,
             alignment: AlignmentType.CENTER,
-            children: [
-              new TextRun({ text: "업무", bold: true, size: FONT_SIZE }),
-            ],
+            children: [new TextRun({ text: "업무", bold: true, size: FONT_SIZE })],
           }),
         ],
       }),
@@ -436,12 +422,7 @@ function buildLeaderTaskRows(data: ReportData): TableRow[] {
   });
 
   // 마지막 팀원 행 아래 메타 정보 별도 행 추가
-  if (
-    data.targetBusiness ||
-    data.requestTeam ||
-    data.devPeriodFrom ||
-    data.devPeriodTo
-  ) {
+  if (data.targetBusiness || data.requestTeam || data.devPeriodFrom || data.devPeriodTo) {
     const metaParas = buildMetaParagraphs(data);
     if (metaParas.length > 0) {
       memberRows.push(
@@ -456,9 +437,7 @@ function buildLeaderTaskRows(data: ReportData): TableRow[] {
                 new Paragraph({
                   spacing: CELL_SPACING,
                   alignment: AlignmentType.CENTER,
-                  children: [
-                    new TextRun({ text: "", size: FONT_SIZE }),
-                  ],
+                  children: [new TextRun({ text: "", size: FONT_SIZE })],
                 }),
               ],
             }),
@@ -482,9 +461,7 @@ export async function generateDocxBuffer(data: ReportData): Promise<Buffer> {
   const { headerRow, dividerRow, issueRow, etcRow } = buildCommonRows(data);
 
   const taskRows =
-    data.mode === "leader"
-      ? buildLeaderTaskRows(data)
-      : [buildEmployeeTaskRow(data)];
+    data.mode === "leader" ? buildLeaderTaskRows(data) : [buildEmployeeTaskRow(data)];
 
   const doc = new Document({
     styles: {

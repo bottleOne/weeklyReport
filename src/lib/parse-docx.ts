@@ -11,9 +11,7 @@ import { createEmptyContentLine, createEmptyTask, newId } from "./types";
  *   Row 3: 주요이슈 | 내용 | 내용
  *   Row 4: 기타 | 내용 | 내용
  */
-export async function parseDocxToReportData(
-  buffer: ArrayBuffer
-): Promise<ReportData> {
+export async function parseDocxToReportData(buffer: ArrayBuffer): Promise<ReportData> {
   const zip = await JSZip.loadAsync(buffer);
   const documentXml = await zip.file("word/document.xml")?.async("string");
 
@@ -25,9 +23,7 @@ export async function parseDocxToReportData(
   const rows = extractTableRows(documentXml);
 
   if (rows.length < 5) {
-    throw new Error(
-      "주간업무 테이블을 찾을 수 없습니다. 올바른 양식인지 확인해주세요."
-    );
+    throw new Error("주간업무 테이블을 찾을 수 없습니다. 올바른 양식인지 확인해주세요.");
   }
 
   // Row 0: 회의기준일, 팀명/이름
@@ -60,14 +56,8 @@ export async function parseDocxToReportData(
     meetingDate,
     teamName,
     authorName,
-    thisWeekTasks:
-      thisWeekResult.tasks.length > 0
-        ? thisWeekResult.tasks
-        : [createEmptyTask()],
-    nextWeekTasks:
-      nextWeekResult.tasks.length > 0
-        ? nextWeekResult.tasks
-        : [createEmptyTask()],
+    thisWeekTasks: thisWeekResult.tasks.length > 0 ? thisWeekResult.tasks : [createEmptyTask()],
+    nextWeekTasks: nextWeekResult.tasks.length > 0 ? nextWeekResult.tasks : [createEmptyTask()],
     members: [],
     targetBusiness: thisWeekResult.targetBusiness,
     requestTeam: thisWeekResult.requestTeam,
@@ -110,9 +100,7 @@ function extractTableRows(xml: string): string[] {
 }
 
 /** 하나의 <w:tr>에서 각 <w:tc>의 텍스트를 추출 (단순 텍스트용) */
-function extractCellTexts(
-  rowXml: string
-): { text: string }[] {
+function extractCellTexts(rowXml: string): { text: string }[] {
   const cells: { text: string }[] = [];
   const cellRegex = /<w:tc[\s>][\s\S]*?<\/w:tc>/g;
   let match;
@@ -199,8 +187,7 @@ function normalizeDate(raw: string): string {
  * 반환: [본문텍스트, dateFrom(YYYY-MM-DD), dateTo(YYYY-MM-DD)]
  */
 function extractDateFromText(text: string, year: string): [string, string, string] {
-  const datePattern =
-    /\((\d{1,2}\.\d{1,2}(?:\s*~\s*\d{1,2}\.\d{1,2})?~?)\)\s*$/;
+  const datePattern = /\((\d{1,2}\.\d{1,2}(?:\s*~\s*\d{1,2}\.\d{1,2})?~?)\)\s*$/;
   const m = text.match(datePattern);
   if (m) {
     const rawDate = m[1];
@@ -241,8 +228,7 @@ function parseTasksFromParagraphs(paras: ParaInfo[], year: string): ParsedTaskRe
       tasks.push({
         id: newId(),
         title: currentTask.title || "",
-        contentLines:
-          contentLines.length > 0 ? contentLines : [createEmptyContentLine()],
+        contentLines: contentLines.length > 0 ? contentLines : [createEmptyContentLine()],
       });
     }
     currentTask = null;
@@ -340,12 +326,7 @@ function parseTasksFromParagraphs(paras: ParaInfo[], year: string): ParsedTaskRe
 
       // 번호 없고 "-"도 아닌 일반 텍스트인데,
       // 앞 줄이 끊긴 문장일 수 있음 (Word에서 줄바꿈 된 경우)
-      if (
-        !numItem &&
-        !isNumbered &&
-        !rawText.startsWith("- ") &&
-        contentLines.length > 0
-      ) {
+      if (!numItem && !isNumbered && !rawText.startsWith("- ") && contentLines.length > 0) {
         // 이전 줄에 이어 붙이기 (줄바꿈으로 끊긴 문장)
         const last = contentLines[contentLines.length - 1];
         const combined = last.text + " " + rawText;
