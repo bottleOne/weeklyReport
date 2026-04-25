@@ -4,4 +4,9 @@ test-output.docx
 test-parse.mjs
 tsconfig.tsbuildinfo
 
+# IDE
 /.idea
+/.vscode
+
+# Claude Code — share project settings/skills/hooks/agents, exclude personal
+.claude/settings.local.json
