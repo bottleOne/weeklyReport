@@ -29,6 +29,11 @@ const TEXT_FIELDS: { key: keyof ProjectPlanData; label: string; placeholder: str
   { key: "deliverables", label: "5. 산출물", placeholder: "최종 결과물 목록" },
 ];
 
+const NAV_ITEMS: { key: PlanTab; label: string; icon: string; desc: string }[] = [
+  { key: "plan", label: "기획서", icon: "📋", desc: "전체 기획 본문" },
+  { key: "schedule", label: "일정 관리", icon: "📅", desc: "달력 + 세부 일정" },
+];
+
 /** Date → YYYY-MM-DD (로컬 자정 기준). */
 function formatLocalDate(d: Date): string {
   const y = d.getFullYear();
@@ -41,8 +46,18 @@ export default function PlanPage() {
   const [plan, setPlan] = useState<ProjectPlanData>(() => createEmptyPlan());
   const [activeTab, setActiveTab] = useState<PlanTab>("plan");
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
+
+  // 선택된 일정이 삭제/사라지면 selection 자동 해제
+  useEffect(() => {
+    if (!selectedEntryId) return;
+    if (!plan.scheduleEntries.some((e) => e.id === selectedEntryId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- scheduleEntries 변경에 따라가는 파생 정리
+      setSelectedEntryId(null);
+    }
+  }, [plan.scheduleEntries, selectedEntryId]);
 
   // 마운트 시 localStorage 복원.
   // SSR 안전: 서버는 localStorage 없음 → 빈 폼 → 클라 마운트 후 복원.
@@ -68,7 +83,12 @@ export default function PlanPage() {
     const dateTo = formatLocalDate(range.to);
     const entry = createScheduleEntryFromRange(dateFrom, dateTo);
     setPlan((prev) => ({ ...prev, scheduleEntries: [...prev.scheduleEntries, entry] }));
+    setSelectedEntryId(entry.id);
     toast.success(`기간 추가: ${dateFrom}${dateFrom !== dateTo ? ` ~ ${dateTo}` : ""}`);
+  }, []);
+
+  const handleEntryClick = useCallback((id: string) => {
+    setSelectedEntryId(id);
   }, []);
 
   const updateEntry = useCallback((id: string, field: keyof PlanScheduleEntry, value: string) => {
@@ -229,13 +249,13 @@ export default function PlanPage() {
 
   // ============== EDIT MODE ==============
   return (
-    <div className="mx-auto max-w-[1200px] p-6">
+    <div className="mx-auto max-w-[1600px] p-6">
       {/* Header */}
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">프로젝트 기획서</h1>
           <p className="text-sm text-gray-500">
-            기획서 / 일정 관리 탭으로 분리 작성, .docx / .pdf / .md로 다운로드
+            왼쪽에서 기획서/일정을 전환하며 작성, .docx / .pdf / .md로 다운로드
           </p>
         </div>
         <div className="flex gap-2">
@@ -254,144 +274,164 @@ export default function PlanPage() {
         </div>
       </div>
 
-      {/* 탭 전환 토글 */}
-      <div className="mb-5 flex justify-center">
-        <div className="inline-flex rounded-lg bg-gray-100 p-1">
-          <button
-            onClick={() => setActiveTab("plan")}
-            aria-current={activeTab === "plan" ? "page" : undefined}
-            className={`cursor-pointer rounded-md px-5 py-2 text-sm font-medium transition-colors ${
-              activeTab === "plan"
-                ? "bg-white text-indigo-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
+      {/* 좌측 nav + 메인 */}
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row">
+        {/* 좌측 사이드바: 모드 전환 nav */}
+        <aside className="w-full shrink-0 lg:w-[220px]">
+          <nav
+            aria-label="기획서 섹션"
+            className="flex gap-2 rounded-xl border border-gray-200 bg-white p-2 lg:flex-col lg:gap-1"
           >
-            📋 기획서
-          </button>
-          <button
-            onClick={() => setActiveTab("schedule")}
-            aria-current={activeTab === "schedule" ? "page" : undefined}
-            className={`cursor-pointer rounded-md px-5 py-2 text-sm font-medium transition-colors ${
-              activeTab === "schedule"
-                ? "bg-white text-indigo-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            📅 일정 관리
-          </button>
-        </div>
-      </div>
+            {NAV_ITEMS.map((item) => {
+              const active = activeTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveTab(item.key)}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex-1 cursor-pointer rounded-lg px-3 py-2.5 text-left transition-colors lg:flex-none ${
+                    active ? "bg-indigo-600 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </div>
+                  <div
+                    className={`mt-0.5 hidden text-xs lg:block ${
+                      active ? "text-indigo-100" : "text-gray-400"
+                    }`}
+                  >
+                    {item.desc}
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-      {/* 기본 정보: 양 탭 공통 */}
-      <PlanInfoSection
-        title={plan.title}
-        teamName={plan.teamName}
-        authorName={plan.authorName}
-        createdDate={plan.createdDate}
-        startDate={plan.startDate}
-        endDate={plan.endDate}
-        onChange={(field, value) =>
-          updateField(
-            field as keyof ProjectPlanData,
-            value as ProjectPlanData[keyof ProjectPlanData]
-          )
-        }
-      />
-
-      {/* ===== 기획서 탭 ===== */}
-      {activeTab === "plan" && (
-        <>
-          <PlanTextSection
-            fields={TEXT_FIELDS.map((f) => ({
-              key: f.key,
-              label: f.label,
-              placeholder: f.placeholder,
-              value: plan[f.key] as string,
-            }))}
-            onChange={(key, value) =>
-              updateField(
-                key as keyof ProjectPlanData,
-                value as ProjectPlanData[keyof ProjectPlanData]
-              )
-            }
-          />
-
-          {/* 리스크 / 기타 */}
-          <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
-            <div className="mb-4 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
-              ⚠️ 리스크 & 기타
-            </div>
-            <div className="mb-4">
-              <label className="mb-1 block text-xs font-semibold text-gray-700">리스크</label>
-              <textarea
-                placeholder="예측 가능한 리스크와 대응 방안"
-                value={plan.risks}
-                onChange={(e) => updateField("risks", e.target.value)}
-                className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
+        {/* 메인: 모드별 콘텐츠 */}
+        <section className="min-w-0 flex-1">
+          {activeTab === "plan" && (
+            <div className="space-y-4">
+              <PlanInfoSection
+                title={plan.title}
+                teamName={plan.teamName}
+                authorName={plan.authorName}
+                createdDate={plan.createdDate}
+                startDate={plan.startDate}
+                endDate={plan.endDate}
+                onChange={(field, value) =>
+                  updateField(
+                    field as keyof ProjectPlanData,
+                    value as ProjectPlanData[keyof ProjectPlanData]
+                  )
+                }
               />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-700">기타</label>
-              <textarea
-                placeholder="기타 사항"
-                value={plan.etc}
-                onChange={(e) => updateField("etc", e.target.value)}
-                className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
+              <PlanTextSection
+                fields={TEXT_FIELDS.map((f) => ({
+                  key: f.key,
+                  label: f.label,
+                  placeholder: f.placeholder,
+                  value: plan[f.key] as string,
+                }))}
+                onChange={(key, value) =>
+                  updateField(
+                    key as keyof ProjectPlanData,
+                    value as ProjectPlanData[keyof ProjectPlanData]
+                  )
+                }
               />
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ===== 일정 관리 탭 ===== */}
-      {activeTab === "schedule" && (
-        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
-          {/* 좌측: 스크롤 달력 */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <div className="mb-3 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
-              📅 달력
-            </div>
-            <div className="min-h-[500px] overflow-y-auto pr-2 lg:max-h-[calc(100vh-260px)]">
-              <PlanScheduleCalendar
-                entries={plan.scheduleEntries}
-                onRangeCommit={handleRangeCommit}
-                highlightedEntryId={highlightedEntryId}
-              />
-            </div>
-          </div>
-
-          {/* 우측: 세부 일정 사이드바 */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
-              <span className="flex items-center gap-2">📝 세부 일정</span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-xs">
-                {plan.scheduleEntries.length}
-              </span>
-            </div>
-            <div className="min-h-[500px] overflow-y-auto pr-1 lg:max-h-[calc(100vh-260px)]">
-              {plan.scheduleEntries.length === 0 ? (
-                <p className="py-12 text-center text-sm text-gray-400">
-                  왼쪽 달력에서 시작일 → 종료일을 클릭해
-                  <br />첫 일정을 추가하세요.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {plan.scheduleEntries.map((entry, idx) => (
-                    <PlanScheduleEntryCard
-                      key={entry.id}
-                      entry={entry}
-                      index={idx}
-                      onChange={updateEntry}
-                      onRemove={removeEntry}
-                      onHover={setHighlightedEntryId}
-                    />
-                  ))}
+              <div className="rounded-xl border border-gray-200 bg-white p-5">
+                <div className="mb-4 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
+                  ⚠️ 리스크 & 기타
                 </div>
-              )}
+                <div className="mb-4">
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">리스크</label>
+                  <textarea
+                    placeholder="예측 가능한 리스크와 대응 방안"
+                    value={plan.risks}
+                    onChange={(e) => updateField("risks", e.target.value)}
+                    className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">기타</label>
+                  <textarea
+                    placeholder="기타 사항"
+                    value={plan.etc}
+                    onChange={(e) => updateField("etc", e.target.value)}
+                    className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          {activeTab === "schedule" && (
+            <div className="flex flex-col gap-4 lg:flex-row">
+              {/* 큰 달력 */}
+              <div className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white p-4">
+                <div className="mb-3 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
+                  📅 달력
+                  <span className="ml-auto text-xs font-normal text-indigo-500">
+                    드래그로 추가, 일정 위 클릭으로 카드 이동
+                  </span>
+                </div>
+                <div className="min-h-[600px] overflow-y-auto pr-2 lg:max-h-[calc(100vh-200px)]">
+                  <PlanScheduleCalendar
+                    entries={plan.scheduleEntries}
+                    onRangeCommit={handleRangeCommit}
+                    onEntryClick={handleEntryClick}
+                    highlightedEntryId={highlightedEntryId}
+                  />
+                </div>
+              </div>
+
+              {/* 오른쪽 사이드바: 선택된 일정 1개의 상세만 */}
+              <aside className="w-full shrink-0 rounded-xl border border-gray-200 bg-white p-5 lg:w-[480px]">
+                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
+                  <span className="flex items-center gap-2">📝 세부 일정</span>
+                  {selectedEntryId && (
+                    <button
+                      onClick={() => setSelectedEntryId(null)}
+                      className="cursor-pointer rounded-md px-2 py-0.5 text-xs text-indigo-700 transition-colors hover:bg-white"
+                    >
+                      ✕ 닫기
+                    </button>
+                  )}
+                </div>
+                <div className="overflow-y-auto pr-1 lg:max-h-[calc(100vh-200px)]">
+                  {(() => {
+                    const selectedIdx = selectedEntryId
+                      ? plan.scheduleEntries.findIndex((e) => e.id === selectedEntryId)
+                      : -1;
+                    const selected = selectedIdx >= 0 ? plan.scheduleEntries[selectedIdx] : null;
+                    if (!selected) {
+                      return (
+                        <p className="py-16 text-center text-sm text-gray-400">
+                          왼쪽 달력에서 일정을 클릭하면
+                          <br />
+                          여기에 상세가 나타납니다.
+                        </p>
+                      );
+                    }
+                    return (
+                      <PlanScheduleEntryCard
+                        entry={selected}
+                        index={selectedIdx}
+                        onChange={updateEntry}
+                        onRemove={removeEntry}
+                        onHover={setHighlightedEntryId}
+                      />
+                    );
+                  })()}
+                </div>
+              </aside>
+            </div>
+          )}
+        </section>
+      </div>
 
       <div className="flex justify-center py-4">
         <button
