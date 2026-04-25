@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import type { ProjectPlanData, Milestone } from "@/lib/plan-types";
 import { createEmptyPlan, createEmptyMilestone, generatePlanFileName } from "@/lib/plan-types";
@@ -215,14 +214,6 @@ export default function PlanPage() {
       {/* Header */}
       <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="mb-1 flex items-center gap-2">
-            <Link
-              href="/"
-              className="text-xs text-gray-500 transition-colors hover:text-indigo-600"
-            >
-              ← 주간보고서
-            </Link>
-          </div>
           <h1 className="text-2xl font-extrabold text-gray-900">프로젝트 기획서</h1>
           <p className="text-sm text-gray-500">
             기초 기획서와 마일스톤+작업 일정을 작성하고 .docx / .pdf / .md로 다운로드하세요
