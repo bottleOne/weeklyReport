@@ -3,3 +3,5 @@
 test-output.docx
 test-parse.mjs
 tsconfig.tsbuildinfo
+
+/.idea
