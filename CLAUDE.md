@@ -1,7 +1,11 @@
 # weeklyReport — 프로젝트 원칙
 
-Next.js 16 (App Router) + React 19 + TypeScript 6 기반 주간업무 보고서 생성 웹앱.
-사용자가 폼에 입력 → DOCX/PDF 다운로드, 또는 기존 DOCX 업로드 → 폼 복원.
+Next.js 16 (App Router) + React 19 + TypeScript 6 기반 문서 작성 도구.
+
+**두 도메인** (라우트로 분리):
+
+- `/` — **주간업무 보고서**: 폼 입력 → DOCX/PDF, 기존 DOCX 업로드 → 복원
+- `/plan` — **프로젝트 기획서**: 기획 본문 + 마일스톤·작업 일정 → DOCX/PDF/Markdown
 
 ## 기술 스택 고정값
 
@@ -76,8 +80,12 @@ if (!parsed.success) return NextResponse.json({ error: ... }, { status: 400 });
 
 - **날짜 내부 포맷**: 항상 `YYYY-MM-DD` 문자열. 표시 변환은 `formatDateRange` 등 헬퍼만 통과
 - **ID 타입**: 모두 `string` (UUID)
-- **모드**: `"employee"` (사원) / `"leader"` (팀장). 분기는 `mode` 한 곳에서만
-- **폼 데이터 타입**: `ReportData` 한 곳에서 정의 (src/lib/types.ts)
+- **주간보고서 모드**: `"employee"` (사원) / `"leader"` (팀장). 분기는 `mode` 한 곳에서만
+- **도메인 타입 위치**:
+  - 주간보고서: [src/lib/types.ts](src/lib/types.ts) (`ReportData`) + [src/lib/schemas.ts](src/lib/schemas.ts)
+  - 프로젝트 기획서: [src/lib/plan-types.ts](src/lib/plan-types.ts) (`ProjectPlanData`) + [src/lib/plan-schemas.ts](src/lib/plan-schemas.ts)
+- **자동저장 키 규칙**: `weeklyReport:<domain>FormState:v<n>` (스키마 깨짐 방지 버전 prefix)
+- **자동저장 hook**: 제네릭 [src/hooks/usePersistedState.ts](src/hooks/usePersistedState.ts) 사용. 도메인 wrapper는 선택
 
 ## 코드 스타일
 
@@ -180,7 +188,22 @@ npm run test:coverage # 커버리지 리포트
 
 ## 참고 파일
 
-- 도메인 타입: [src/lib/types.ts](src/lib/types.ts)
-- 메인 폼: [src/app/page.tsx](src/app/page.tsx)
+### 주간보고서 (`/`)
+
+- 도메인 타입: [src/lib/types.ts](src/lib/types.ts), 스키마: [src/lib/schemas.ts](src/lib/schemas.ts)
+- 페이지: [src/app/page.tsx](src/app/page.tsx)
 - DOCX 파싱: [src/lib/parse-docx.ts](src/lib/parse-docx.ts)
 - DOCX 생성: [src/lib/generate-docx.ts](src/lib/generate-docx.ts)
+
+### 프로젝트 기획서 (`/plan`)
+
+- 도메인 타입: [src/lib/plan-types.ts](src/lib/plan-types.ts), 스키마: [src/lib/plan-schemas.ts](src/lib/plan-schemas.ts)
+- 페이지: [src/app/plan/page.tsx](src/app/plan/page.tsx)
+- DOCX 생성: [src/lib/generate-plan-docx.ts](src/lib/generate-plan-docx.ts)
+- Markdown 생성: [src/lib/generate-plan-markdown.ts](src/lib/generate-plan-markdown.ts)
+- 컴포넌트: `src/components/plan/` (PlanInfoSection, PlanTextSection, MilestoneCard, PlanTaskRow, PlanPreview)
+
+### 공통
+
+- 자동저장 hook: [src/hooks/usePersistedState.ts](src/hooks/usePersistedState.ts)
+- 주간보고서 wrapper: [src/hooks/useFormPersistence.ts](src/hooks/useFormPersistence.ts)

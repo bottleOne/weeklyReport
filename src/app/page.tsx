@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import type { TaskItem, ContentLine, MemberData, ReportData, ReportMode } from "@/lib/types";
 import { createEmptyTask, createEmptyMember, generateFileName, getTodayLocal } from "@/lib/types";
@@ -372,6 +373,14 @@ export default function Home() {
       {/* Header */}
       <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
         <div>
+          <div className="mb-1 flex items-center gap-2">
+            <Link
+              href="/plan"
+              className="text-xs text-gray-500 transition-colors hover:text-indigo-600"
+            >
+              프로젝트 기획서 →
+            </Link>
+          </div>
           <h1 className="mb-1 text-2xl font-extrabold text-gray-900">주간업무 보고서</h1>
           <p className="text-sm text-gray-500">
             웹에서 간편하게 작성하고, .docx / .pdf 파일로 다운로드하세요
