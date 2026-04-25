@@ -12,6 +12,7 @@ import {
   createEmptyTask,
   createEmptyMember,
   generateFileName,
+  getTodayLocal,
 } from "@/lib/types";
 import TaskCard from "@/components/TaskCard";
 import MemberCard from "@/components/MemberCard";
@@ -21,9 +22,7 @@ type DownloadType = "docx" | "pdf" | null;
 
 export default function Home() {
   const [mode, setMode] = useState<ReportMode>("employee");
-  const [meetingDate, setMeetingDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [meetingDate, setMeetingDate] = useState(getTodayLocal());
   const [teamName, setTeamName] = useState("");
   const [authorName, setAuthorName] = useState("");
 
@@ -79,7 +78,7 @@ export default function Home() {
 
   // ==================== 사원 모드 핸들러 ====================
   const updateThisWeekField = useCallback(
-    (id: number, field: string, value: string) => {
+    (id: string, field: string, value: string) => {
       setThisWeekTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
       );
@@ -87,7 +86,7 @@ export default function Home() {
     []
   );
   const updateThisWeekContentLines = useCallback(
-    (id: number, lines: ContentLine[]) => {
+    (id: string, lines: ContentLine[]) => {
       setThisWeekTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, contentLines: lines } : t))
       );
@@ -97,14 +96,14 @@ export default function Home() {
   const addThisWeekTask = useCallback(() => {
     setThisWeekTasks((prev) => [...prev, createEmptyTask()]);
   }, []);
-  const removeThisWeekTask = useCallback((id: number) => {
+  const removeThisWeekTask = useCallback((id: string) => {
     setThisWeekTasks((prev) =>
       prev.length <= 1 ? prev : prev.filter((t) => t.id !== id)
     );
   }, []);
 
   const updateNextWeekField = useCallback(
-    (id: number, field: string, value: string) => {
+    (id: string, field: string, value: string) => {
       setNextWeekTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
       );
@@ -112,7 +111,7 @@ export default function Home() {
     []
   );
   const updateNextWeekContentLines = useCallback(
-    (id: number, lines: ContentLine[]) => {
+    (id: string, lines: ContentLine[]) => {
       setNextWeekTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, contentLines: lines } : t))
       );
@@ -122,7 +121,7 @@ export default function Home() {
   const addNextWeekTask = useCallback(() => {
     setNextWeekTasks((prev) => [...prev, createEmptyTask()]);
   }, []);
-  const removeNextWeekTask = useCallback((id: number) => {
+  const removeNextWeekTask = useCallback((id: string) => {
     setNextWeekTasks((prev) =>
       prev.length <= 1 ? prev : prev.filter((t) => t.id !== id)
     );
@@ -132,13 +131,13 @@ export default function Home() {
   const addMember = useCallback(() => {
     setMembers((prev) => [...prev, createEmptyMember()]);
   }, []);
-  const removeMember = useCallback((id: number) => {
+  const removeMember = useCallback((id: string) => {
     setMembers((prev) =>
       prev.length <= 1 ? prev : prev.filter((m) => m.id !== id)
     );
   }, []);
   const updateMember = useCallback(
-    (id: number, updated: Partial<MemberData>) => {
+    (id: string, updated: Partial<MemberData>) => {
       setMembers((prev) =>
         prev.map((m) => (m.id === id ? { ...m, ...updated } : m))
       );
@@ -168,9 +167,7 @@ export default function Home() {
 
       const data: ReportData = await res.json();
 
-      setMeetingDate(
-        data.meetingDate || new Date().toISOString().split("T")[0]
-      );
+      setMeetingDate(data.meetingDate || getTodayLocal());
       setTeamName(data.teamName || "");
       setAuthorName(data.authorName || "");
       setMode(data.mode || "employee");
@@ -209,7 +206,7 @@ export default function Home() {
 
   const resetForm = () => {
     if (confirm("모든 입력 내용을 초기화하시겠습니까?")) {
-      setMeetingDate(new Date().toISOString().split("T")[0]);
+      setMeetingDate(getTodayLocal());
       setTeamName("");
       setAuthorName("");
       setThisWeekTasks([createEmptyTask()]);

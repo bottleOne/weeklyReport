@@ -14,8 +14,8 @@ interface MemberCardProps {
   member: MemberData;
   index: number;
   total: number;
-  onUpdate: (id: number, updated: Partial<MemberData>) => void;
-  onRemove: (id: number) => void;
+  onUpdate: (id: string, updated: Partial<MemberData>) => void;
+  onRemove: (id: string) => void;
 }
 
 export default function MemberCard({
@@ -80,14 +80,14 @@ export default function MemberCard({
   const addTask = (which: "thisWeekTasks" | "nextWeekTasks") =>
     updateTasks(which, (prev) => [...prev, createEmptyTask()]);
 
-  const removeTask = (which: "thisWeekTasks" | "nextWeekTasks", id: number) =>
+  const removeTask = (which: "thisWeekTasks" | "nextWeekTasks", id: string) =>
     updateTasks(which, (prev) =>
       prev.length <= 1 ? prev : prev.filter((t) => t.id !== id)
     );
 
   const changeField = (
     which: "thisWeekTasks" | "nextWeekTasks",
-    taskId: number,
+    taskId: string,
     field: string,
     value: string
   ) =>
@@ -97,7 +97,7 @@ export default function MemberCard({
 
   const changeContentLines = (
     which: "thisWeekTasks" | "nextWeekTasks",
-    taskId: number,
+    taskId: string,
     lines: ContentLine[]
   ) =>
     updateTasks(which, (prev) =>
@@ -218,9 +218,9 @@ interface TaskMiniProps {
   index: number;
   total: number;
   accent: "blue" | "emerald";
-  onChangeField: (id: number, field: string, value: string) => void;
-  onChangeContentLines: (id: number, lines: ContentLine[]) => void;
-  onRemove: (id: number) => void;
+  onChangeField: (id: string, field: string, value: string) => void;
+  onChangeContentLines: (id: string, lines: ContentLine[]) => void;
+  onRemove: (id: string) => void;
 }
 
 function TaskMini({
@@ -236,7 +236,7 @@ function TaskMini({
     accent === "blue" ? "border-blue-200" : "border-emerald-200";
   const numBg = accent === "blue" ? "bg-blue-500" : "bg-emerald-500";
 
-  const updateLine = (lineId: number, field: "text" | "dateFrom" | "dateTo", value: string) =>
+  const updateLine = (lineId: string, field: "text" | "dateFrom" | "dateTo", value: string) =>
     onChangeContentLines(
       task.id,
       task.contentLines.map((l) =>
@@ -250,7 +250,7 @@ function TaskMini({
       createEmptyContentLine(),
     ]);
 
-  const removeLine = (lineId: number) => {
+  const removeLine = (lineId: string) => {
     if (task.contentLines.length <= 1) return;
     onChangeContentLines(
       task.id,
@@ -259,7 +259,7 @@ function TaskMini({
   };
 
   // ---- SubDetail helpers ----
-  const updateSubDetail = (lineId: number, subId: number, field: "text" | "dateFrom" | "dateTo", value: string) =>
+  const updateSubDetail = (lineId: string, subId: string, field: "text" | "dateFrom" | "dateTo", value: string) =>
     onChangeContentLines(
       task.id,
       task.contentLines.map((l) => {
@@ -273,7 +273,7 @@ function TaskMini({
       })
     );
 
-  const addSubDetail = (lineId: number) =>
+  const addSubDetail = (lineId: string) =>
     onChangeContentLines(
       task.id,
       task.contentLines.map((l) => {
@@ -282,7 +282,7 @@ function TaskMini({
       })
     );
 
-  const removeSubDetail = (lineId: number, subId: number) =>
+  const removeSubDetail = (lineId: string, subId: string) =>
     onChangeContentLines(
       task.id,
       task.contentLines.map((l) => {

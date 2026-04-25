@@ -15,9 +15,9 @@ interface TaskCardProps {
   total: number;
   accentColor: "blue" | "emerald";
   placeholderContent: string;
-  onChangeField: (id: number, field: string, value: string) => void;
-  onChangeContentLines: (id: number, lines: ContentLine[]) => void;
-  onRemove: (id: number) => void;
+  onChangeField: (id: string, field: string, value: string) => void;
+  onChangeContentLines: (id: string, lines: ContentLine[]) => void;
+  onRemove: (id: string) => void;
 }
 
 export default function TaskCard({
@@ -32,7 +32,7 @@ export default function TaskCard({
 }: TaskCardProps) {
   const accentBg = accentColor === "blue" ? "bg-blue-600" : "bg-emerald-600";
 
-  const updateLine = (lineId: number, field: "text" | "dateFrom" | "dateTo", value: string) => {
+  const updateLine = (lineId: string, field: "text" | "dateFrom" | "dateTo", value: string) => {
     const updated = task.contentLines.map((l) =>
       l.id === lineId ? { ...l, [field]: value } : l
     );
@@ -46,7 +46,7 @@ export default function TaskCard({
     ]);
   };
 
-  const removeLine = (lineId: number) => {
+  const removeLine = (lineId: string) => {
     if (task.contentLines.length <= 1) return;
     onChangeContentLines(
       task.id,
@@ -55,7 +55,7 @@ export default function TaskCard({
   };
 
   // ---- SubDetail helpers ----
-  const updateSubDetail = (lineId: number, subId: number, field: "text" | "dateFrom" | "dateTo", value: string) => {
+  const updateSubDetail = (lineId: string, subId: string, field: "text" | "dateFrom" | "dateTo", value: string) => {
     const updated = task.contentLines.map((l) => {
       if (l.id !== lineId) return l;
       return {
@@ -68,7 +68,7 @@ export default function TaskCard({
     onChangeContentLines(task.id, updated);
   };
 
-  const addSubDetail = (lineId: number) => {
+  const addSubDetail = (lineId: string) => {
     const updated = task.contentLines.map((l) => {
       if (l.id !== lineId) return l;
       return { ...l, subDetails: [...l.subDetails, createEmptySubDetail()] };
@@ -76,7 +76,7 @@ export default function TaskCard({
     onChangeContentLines(task.id, updated);
   };
 
-  const removeSubDetail = (lineId: number, subId: number) => {
+  const removeSubDetail = (lineId: string, subId: string) => {
     const updated = task.contentLines.map((l) => {
       if (l.id !== lineId) return l;
       return { ...l, subDetails: l.subDetails.filter((s) => s.id !== subId) };

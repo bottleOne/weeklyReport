@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import type { TaskItem, ContentLine, SubDetail, ReportData } from "./types";
-import { createEmptyContentLine } from "./types";
+import { createEmptyContentLine, createEmptyTask, newId } from "./types";
 
 /**
  * .docx 파일(ArrayBuffer)을 파싱하여 ReportData로 변환
@@ -63,11 +63,11 @@ export async function parseDocxToReportData(
     thisWeekTasks:
       thisWeekResult.tasks.length > 0
         ? thisWeekResult.tasks
-        : [createEmptyTaskWithId()],
+        : [createEmptyTask()],
     nextWeekTasks:
       nextWeekResult.tasks.length > 0
         ? nextWeekResult.tasks
-        : [createEmptyTaskWithId()],
+        : [createEmptyTask()],
     members: [],
     targetBusiness: thisWeekResult.targetBusiness,
     requestTeam: thisWeekResult.requestTeam,
@@ -79,14 +79,6 @@ export async function parseDocxToReportData(
     nextDevPeriodTo: nextWeekResult.devPeriodTo,
     issues,
     etc,
-  };
-}
-
-function createEmptyTaskWithId(): TaskItem {
-  return {
-    id: Date.now(),
-    title: "",
-    contentLines: [createEmptyContentLine()],
   };
 }
 
@@ -247,7 +239,7 @@ function parseTasksFromParagraphs(paras: ParaInfo[], year: string): ParsedTaskRe
   const flushTask = () => {
     if (currentTask) {
       tasks.push({
-        id: Date.now() + Math.random() * 10000,
+        id: newId(),
         title: currentTask.title || "",
         contentLines:
           contentLines.length > 0 ? contentLines : [createEmptyContentLine()],
@@ -324,7 +316,7 @@ function parseTasksFromParagraphs(paras: ParaInfo[], year: string): ParsedTaskRe
         const [lineText, lineFrom, lineTo] = extractDateFromText(subText, year);
         if (lineText) {
           const sub: SubDetail = {
-            id: Date.now() + Math.random() * 10000,
+            id: newId(),
             text: lineText,
             dateFrom: lineFrom,
             dateTo: lineTo,
@@ -334,7 +326,7 @@ function parseTasksFromParagraphs(paras: ParaInfo[], year: string): ParsedTaskRe
           } else {
             // content line이 없으면 빈 줄 하나 만들고 sub 추가
             const newLine: ContentLine = {
-              id: Date.now() + Math.random() * 10000,
+              id: newId(),
               text: "",
               dateFrom: "",
               dateTo: "",
@@ -368,7 +360,7 @@ function parseTasksFromParagraphs(paras: ParaInfo[], year: string): ParsedTaskRe
       const [lineText, lineFrom, lineTo] = extractDateFromText(rawText, year);
 
       contentLines.push({
-        id: Date.now() + Math.random() * 10000,
+        id: newId(),
         text: lineText,
         dateFrom: lineFrom,
         dateTo: lineTo,

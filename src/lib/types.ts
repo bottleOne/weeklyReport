@@ -1,12 +1,12 @@
 export interface SubDetail {
-  id: number;
+  id: string;
   text: string;
   dateFrom: string; // 시작일 YYYY-MM-DD (선택)
   dateTo: string; // 종료일 YYYY-MM-DD (선택)
 }
 
 export interface ContentLine {
-  id: number;
+  id: string;
   text: string;
   dateFrom: string; // 시작일 YYYY-MM-DD (선택)
   dateTo: string; // 종료일 YYYY-MM-DD (선택)
@@ -14,7 +14,7 @@ export interface ContentLine {
 }
 
 export interface TaskItem {
-  id: number;
+  id: string;
   title: string;
   contentLines: ContentLine[];
 }
@@ -22,7 +22,7 @@ export interface TaskItem {
 export type ReportMode = "employee" | "leader";
 
 export interface MemberData {
-  id: number;
+  id: string;
   name: string;
   thisWeekTasks: TaskItem[];
   nextWeekTasks: TaskItem[];
@@ -53,9 +53,27 @@ export interface ReportData {
   etc: string;
 }
 
+/** UUID 기반 ID 생성. 환경에 randomUUID가 없으면 fallback. */
+export function newId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // Fallback (구형 환경): timestamp + random
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** 로컬 타임존 기준 오늘 날짜를 YYYY-MM-DD로 반환 */
+export function getTodayLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function createEmptySubDetail(): SubDetail {
   return {
-    id: Date.now() + Math.random() * 10000,
+    id: newId(),
     text: "",
     dateFrom: "",
     dateTo: "",
@@ -64,7 +82,7 @@ export function createEmptySubDetail(): SubDetail {
 
 export function createEmptyContentLine(): ContentLine {
   return {
-    id: Date.now() + Math.random() * 10000,
+    id: newId(),
     text: "",
     dateFrom: "",
     dateTo: "",
@@ -74,7 +92,7 @@ export function createEmptyContentLine(): ContentLine {
 
 export function createEmptyTask(): TaskItem {
   return {
-    id: Date.now(),
+    id: newId(),
     title: "",
     contentLines: [createEmptyContentLine()],
   };
@@ -89,7 +107,7 @@ export function getDayOfWeek(dateStr: string): string {
 
 export function createEmptyMember(): MemberData {
   return {
-    id: Date.now() + Math.random() * 10000,
+    id: newId(),
     name: "",
     thisWeekTasks: [createEmptyTask()],
     nextWeekTasks: [createEmptyTask()],
