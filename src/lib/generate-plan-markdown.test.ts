@@ -14,33 +14,24 @@ const sample: ProjectPlanData = {
   deliverables: "설계서, API, UI",
   startDate: "2026-05-01",
   endDate: "2026-07-31",
-  milestones: [
+  scheduleEntries: [
     {
-      id: "m1",
-      title: "요구사항 확정",
-      description: "이해관계자 인터뷰",
+      id: "e2",
+      title: "사용자 인터뷰",
+      dateFrom: "2026-05-08",
+      dateTo: "2026-05-12",
+      details: "",
+      assignee: "김기획",
+      status: "todo",
+    },
+    {
+      id: "e1",
+      title: "현행 권한 분석",
       dateFrom: "2026-05-01",
-      dateTo: "2026-05-15",
-      tasks: [
-        {
-          id: "t1",
-          title: "현행 권한 분석",
-          assignee: "전병일",
-          dateFrom: "2026-05-01",
-          dateTo: "2026-05-07",
-          status: "in_progress",
-          notes: "DB 스키마 포함",
-        },
-        {
-          id: "t2",
-          title: "사용자 인터뷰",
-          assignee: "김기획",
-          dateFrom: "2026-05-08",
-          dateTo: "2026-05-12",
-          status: "todo",
-          notes: "",
-        },
-      ],
+      dateTo: "2026-05-07",
+      details: "DB 스키마 포함",
+      assignee: "전병일",
+      status: "in_progress",
     },
   ],
   risks: "데이터 마이그레이션 복잡도",
@@ -68,32 +59,39 @@ describe("generatePlanMarkdown", () => {
     expect(md).toContain("## 8. 기타");
   });
 
-  it("renders milestone table with all status labels", () => {
+  it("renders schedule table with sorted entries and status labels", () => {
     const md = generatePlanMarkdown(sample);
-    expect(md).toContain("### 1) 요구사항 확정");
-    expect(md).toContain("| 작업 | 담당 | 기간 | 상태 | 메모 |");
+    expect(md).toContain("| # | 기간 | 제목 | 담당 | 상태 | 상세 |");
+    // 정렬 검증: 5월 1일 entry가 5월 8일 entry보다 먼저 나와야 함
+    const idxFirst = md.indexOf("현행 권한 분석");
+    const idxSecond = md.indexOf("사용자 인터뷰");
+    expect(idxFirst).toBeLessThan(idxSecond);
     expect(md).toContain("진행중");
     expect(md).toContain("예정");
-    expect(md).toContain("현행 권한 분석");
   });
 
-  it("escapes pipe characters in notes", () => {
+  it("escapes pipes and converts newlines in details", () => {
     const data: ProjectPlanData = {
       ...sample,
-      milestones: [
+      scheduleEntries: [
         {
-          ...sample.milestones[0],
-          tasks: [
-            {
-              ...sample.milestones[0].tasks[0],
-              notes: "before|after|test",
-            },
-          ],
+          id: "x",
+          title: "test",
+          dateFrom: "2026-05-01",
+          dateTo: "2026-05-01",
+          details: "before|after\nline2",
+          assignee: "",
+          status: "todo",
         },
       ],
     };
     const md = generatePlanMarkdown(data);
-    expect(md).toContain("before\\|after\\|test");
+    expect(md).toContain("before\\|after<br/>line2");
+  });
+
+  it("shows empty state when no entries", () => {
+    const md = generatePlanMarkdown({ ...sample, scheduleEntries: [] });
+    expect(md).toContain("(등록된 일정이 없습니다)");
   });
 
   it("matches structural snapshot", () => {

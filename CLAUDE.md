@@ -5,7 +5,7 @@ Next.js 16 (App Router) + React 19 + TypeScript 6 기반 문서 작성 도구.
 **두 도메인** (라우트로 분리):
 
 - `/` — **주간업무 보고서**: 폼 입력 → DOCX/PDF, 기존 DOCX 업로드 → 복원
-- `/plan` — **프로젝트 기획서**: 기획 본문 + 마일스톤·작업 일정 → DOCX/PDF/Markdown
+- `/plan` — **프로젝트 기획서**: 기획 본문 + 캘린더 기반 일정 → DOCX/PDF/Markdown
 
 ## 기술 스택 고정값
 
@@ -83,7 +83,7 @@ if (!parsed.success) return NextResponse.json({ error: ... }, { status: 400 });
 - **주간보고서 모드**: `"employee"` (사원) / `"leader"` (팀장). 분기는 `mode` 한 곳에서만
 - **도메인 타입 위치**:
   - 주간보고서: [src/lib/types.ts](src/lib/types.ts) (`ReportData`) + [src/lib/schemas.ts](src/lib/schemas.ts)
-  - 프로젝트 기획서: [src/lib/plan-types.ts](src/lib/plan-types.ts) (`ProjectPlanData`) + [src/lib/plan-schemas.ts](src/lib/plan-schemas.ts)
+  - 프로젝트 기획서: [src/lib/plan-types.ts](src/lib/plan-types.ts) (`ProjectPlanData`, `PlanScheduleEntry`) + [src/lib/plan-schemas.ts](src/lib/plan-schemas.ts)
 - **자동저장 키 규칙**: `weeklyReport:<domain>FormState:v<n>` (스키마 깨짐 방지 버전 prefix)
 - **자동저장 hook**: 제네릭 [src/hooks/usePersistedState.ts](src/hooks/usePersistedState.ts) 사용. 도메인 wrapper는 선택
 
@@ -201,7 +201,9 @@ npm run test:coverage # 커버리지 리포트
 - 페이지: [src/app/plan/page.tsx](src/app/plan/page.tsx)
 - DOCX 생성: [src/lib/generate-plan-docx.ts](src/lib/generate-plan-docx.ts)
 - Markdown 생성: [src/lib/generate-plan-markdown.ts](src/lib/generate-plan-markdown.ts)
-- 컴포넌트: `src/components/plan/` (PlanInfoSection, PlanTextSection, MilestoneCard, PlanTaskRow, PlanPreview)
+- 컴포넌트: `src/components/plan/` (PlanInfoSection, PlanTextSection, PlanScheduleCalendar, PlanScheduleEntryCard, PlanPreview)
+- 캘린더: `react-day-picker` (mode="range") + `date-fns` (locale=ko)
+- 캘린더 entry 시각화 CSS: [src/app/globals.css](src/app/globals.css)의 `.rdp-day-entry`, `.rdp-day-highlighted`
 
 ### 공통
 

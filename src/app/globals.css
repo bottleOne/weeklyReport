@@ -53,3 +53,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 textarea {
   line-height: 1.6;
 }
+
+/* react-day-picker v9 — 한 줄 띠를 위한 spacing reset만.
+   색상/border-radius는 PlanScheduleCalendar의 modifiersStyles(인라인)로 적용. */
+
+/* 셀과 버튼 spacing 0, 버튼 배경은 투명 (셀의 인라인 색이 보이도록) */
+.rdp-day {
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+.rdp-day_button {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important; /* 셀의 color(range 흰색 등) 상속 */
+  box-sizing: border-box;
+}
+/* 가로(같은 행 내): 0 / 세로(행 사이): 4px — 띠가 줄바뀜 시 분리되어 보임 */
+.rdp-month_grid {
+  border-collapse: separate !important;
+  border-spacing: 0 4px !important; /* horizontal 0, vertical 4px */
+}
+.rdp-weeks {
+  gap: 4px 0 !important; /* row 4px, column 0 */
+}
+.rdp-week {
+  gap: 0 !important;
+  border-spacing: 0 !important;
+}

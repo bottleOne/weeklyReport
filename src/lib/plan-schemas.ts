@@ -7,23 +7,14 @@ import { z } from "zod";
 
 export const TaskStatusSchema = z.enum(["todo", "in_progress", "done", "blocked"]);
 
-export const PlanTaskSchema = z.object({
+export const PlanScheduleEntrySchema = z.object({
   id: z.string(),
   title: z.string(),
+  dateFrom: z.string(),
+  dateTo: z.string(),
+  details: z.string(),
   assignee: z.string(),
-  dateFrom: z.string(),
-  dateTo: z.string(),
   status: TaskStatusSchema,
-  notes: z.string(),
-});
-
-export const MilestoneSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  dateFrom: z.string(),
-  dateTo: z.string(),
-  tasks: z.array(PlanTaskSchema),
 });
 
 export const ProjectPlanDataSchema = z.object({
@@ -38,7 +29,7 @@ export const ProjectPlanDataSchema = z.object({
   deliverables: z.string(),
   startDate: z.string(),
   endDate: z.string(),
-  milestones: z.array(MilestoneSchema),
+  scheduleEntries: z.array(PlanScheduleEntrySchema),
   risks: z.string(),
   etc: z.string(),
 });

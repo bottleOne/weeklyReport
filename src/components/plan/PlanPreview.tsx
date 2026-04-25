@@ -1,7 +1,7 @@
 "use client";
 
 import type { ProjectPlanData } from "@/lib/plan-types";
-import { TASK_STATUS_LABEL } from "@/lib/plan-types";
+import { TASK_STATUS_LABEL, sortScheduleEntriesByStart } from "@/lib/plan-types";
 import { formatDateRange } from "@/lib/types";
 
 interface PlanPreviewProps {
@@ -12,7 +12,7 @@ function paragraph(text: string) {
   if (!text.trim()) return <span className="text-gray-400">(미입력)</span>;
   return text.split("\n").map((line, i) => (
     <p key={i} className="leading-relaxed">
-      {line || " "}
+      {line || " "}
     </p>
   ));
 }
@@ -20,6 +20,7 @@ function paragraph(text: string) {
 export default function PlanPreview({ data }: PlanPreviewProps) {
   const totalRange =
     data.startDate || data.endDate ? `${data.startDate || ""} ~ ${data.endDate || ""}` : "(미정)";
+  const sorted = sortScheduleEntriesByStart(data.scheduleEntries);
 
   return (
     <div
@@ -39,51 +40,35 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
       <Section title="5. 산출물">{paragraph(data.deliverables)}</Section>
 
       <Section title={`6. 일정 (${totalRange})`}>
-        {data.milestones.length === 0 ? (
-          <span className="text-gray-400">(마일스톤 없음)</span>
+        {sorted.length === 0 ? (
+          <span className="text-gray-400">(등록된 일정 없음)</span>
         ) : (
-          <div className="space-y-4">
-            {data.milestones.map((m, mi) => (
-              <div key={m.id}>
-                <div className="mb-1 font-semibold">
-                  {mi + 1}) {m.title || "(마일스톤 미입력)"}
-                  {(m.dateFrom || m.dateTo) && (
-                    <span className="ml-2 text-xs text-gray-500">
-                      [{formatDateRange({ dateFrom: m.dateFrom, dateTo: m.dateTo }) || "기간 미정"}]
-                    </span>
-                  )}
-                </div>
-                {m.description && (
-                  <div className="mb-1 ml-4 text-xs text-gray-600">{m.description}</div>
-                )}
-                <table className="ml-4 w-[calc(100%-1rem)] table-auto border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-300 text-left text-gray-500">
-                      <th className="py-1 pr-2">작업</th>
-                      <th className="w-20 py-1 pr-2">담당</th>
-                      <th className="w-32 py-1 pr-2">기간</th>
-                      <th className="w-16 py-1">상태</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {m.tasks.map((t) => (
-                      <tr key={t.id} className="border-b border-gray-100 align-top">
-                        <td className="py-1 pr-2">
-                          <div>{t.title || "-"}</div>
-                          {t.notes && <div className="text-[11px] text-gray-500">{t.notes}</div>}
-                        </td>
-                        <td className="py-1 pr-2">{t.assignee || "-"}</td>
-                        <td className="py-1 pr-2">
-                          {formatDateRange({ dateFrom: t.dateFrom, dateTo: t.dateTo }) || "-"}
-                        </td>
-                        <td className="py-1">{TASK_STATUS_LABEL[t.status]}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
+          <table className="w-full table-fixed border-collapse text-xs">
+            <thead>
+              <tr className="border-b-2 border-gray-300 text-left">
+                <th className="w-10 py-2 pr-2 text-gray-500">#</th>
+                <th className="w-40 py-2 pr-2 text-gray-500">기간</th>
+                <th className="w-1/4 py-2 pr-2 text-gray-500">제목</th>
+                <th className="w-20 py-2 pr-2 text-gray-500">담당</th>
+                <th className="w-16 py-2 pr-2 text-gray-500">상태</th>
+                <th className="py-2 text-gray-500">상세</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((e, idx) => (
+                <tr key={e.id} className="border-b border-gray-100 align-top">
+                  <td className="py-2 pr-2 font-medium">{idx + 1}</td>
+                  <td className="py-2 pr-2">
+                    {formatDateRange({ dateFrom: e.dateFrom, dateTo: e.dateTo }) || "-"}
+                  </td>
+                  <td className="py-2 pr-2 font-semibold">{e.title || "-"}</td>
+                  <td className="py-2 pr-2">{e.assignee || "-"}</td>
+                  <td className="py-2 pr-2">{TASK_STATUS_LABEL[e.status]}</td>
+                  <td className="py-2 leading-relaxed whitespace-pre-wrap">{e.details || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </Section>
 

@@ -1,5 +1,5 @@
 import type { ProjectPlanData } from "./plan-types";
-import { TASK_STATUS_LABEL } from "./plan-types";
+import { TASK_STATUS_LABEL, sortScheduleEntriesByStart } from "./plan-types";
 import { formatDateRange } from "./types";
 
 /** ProjectPlanData를 Markdown 문자열로 직렬화. 클라이언트에서 직접 호출. */
@@ -23,32 +23,23 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
     data.startDate || data.endDate ? ` (${data.startDate || ""} ~ ${data.endDate || ""})` : "";
   lines.push(`## 6. 일정${totalRange}`);
   lines.push("");
-  if (data.milestones.length === 0) {
-    lines.push("(마일스톤 없음)");
+
+  const sorted = sortScheduleEntriesByStart(data.scheduleEntries);
+  if (sorted.length === 0) {
+    lines.push("(등록된 일정이 없습니다)");
     lines.push("");
   } else {
-    data.milestones.forEach((m, mi) => {
-      const range = formatDateRange({ dateFrom: m.dateFrom, dateTo: m.dateTo });
-      const titleLine = `### ${mi + 1}) ${m.title || "(마일스톤 미입력)"}${range ? ` — ${range}` : ""}`;
-      lines.push(titleLine);
-      if (m.description) {
-        lines.push(`_${m.description}_`);
-      }
-      if (m.tasks.length > 0) {
-        lines.push("");
-        lines.push("| 작업 | 담당 | 기간 | 상태 | 메모 |");
-        lines.push("|---|---|---|---|---|");
-        m.tasks.forEach((t) => {
-          const taskRange = formatDateRange({ dateFrom: t.dateFrom, dateTo: t.dateTo }) || "-";
-          const status = TASK_STATUS_LABEL[t.status];
-          const escapedNotes = (t.notes || "").replace(/\|/g, "\\|").replace(/\n/g, " ");
-          lines.push(
-            `| ${t.title || "-"} | ${t.assignee || "-"} | ${taskRange} | ${status} | ${escapedNotes || "-"} |`
-          );
-        });
-      }
-      lines.push("");
+    lines.push("| # | 기간 | 제목 | 담당 | 상태 | 상세 |");
+    lines.push("|---|---|---|---|---|---|");
+    sorted.forEach((e, idx) => {
+      const range = formatDateRange({ dateFrom: e.dateFrom, dateTo: e.dateTo }) || "-";
+      const status = TASK_STATUS_LABEL[e.status];
+      const safeDetails = (e.details || "-").replace(/\|/g, "\\|").replace(/\n/g, "<br/>");
+      lines.push(
+        `| ${idx + 1} | ${range} | ${e.title || "-"} | ${e.assignee || "-"} | ${status} | ${safeDetails} |`
+      );
     });
+    lines.push("");
   }
 
   pushSection(lines, "7. 리스크", data.risks);

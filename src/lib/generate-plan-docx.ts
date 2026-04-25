@@ -12,8 +12,8 @@ import {
   HeadingLevel,
   VerticalAlign,
 } from "docx";
-import type { ProjectPlanData, Milestone } from "./plan-types";
-import { TASK_STATUS_LABEL } from "./plan-types";
+import type { ProjectPlanData, PlanScheduleEntry } from "./plan-types";
+import { TASK_STATUS_LABEL, sortScheduleEntriesByStart } from "./plan-types";
 import { formatDateRange } from "./types";
 
 const FONT_SIZE = 20; // 10pt
@@ -63,52 +63,68 @@ function cell(
     margins: CELL_MARGINS,
     width: { size: width, type: WidthType.DXA },
     verticalAlign: VerticalAlign.CENTER,
-    children: [
-      new Paragraph({
-        spacing: { after: 0, line: 240 },
-        alignment: opts?.align ?? AlignmentType.LEFT,
-        children: [makeText(text, { bold: opts?.bold ?? false })],
-      }),
-    ],
+    children: text.split("\n").map(
+      (line) =>
+        new Paragraph({
+          spacing: { after: 0, line: 240 },
+          alignment: opts?.align ?? AlignmentType.LEFT,
+          children: [makeText(line, { bold: opts?.bold ?? false })],
+        })
+    ),
   });
 }
 
-function buildMilestoneTable(milestone: Milestone): Table {
-  const COL_TITLE = 4500;
-  const COL_ASSIGNEE = 1400;
-  const COL_RANGE = 2400;
-  const COL_STATUS = 1200;
-  const COL_NOTES = 1500;
+function buildScheduleTable(entries: PlanScheduleEntry[]): Table {
+  const COL_NUM = 600;
+  const COL_RANGE = 2000;
+  const COL_TITLE = 2800;
+  const COL_ASSIGNEE = 1200;
+  const COL_STATUS = 1000;
+  const COL_DETAILS = 3400;
 
   const headerRow = new TableRow({
+    tableHeader: true,
     children: [
-      cell("작업", COL_TITLE, { bold: true, align: AlignmentType.CENTER }),
-      cell("담당", COL_ASSIGNEE, { bold: true, align: AlignmentType.CENTER }),
+      cell("#", COL_NUM, { bold: true, align: AlignmentType.CENTER }),
       cell("기간", COL_RANGE, { bold: true, align: AlignmentType.CENTER }),
+      cell("제목", COL_TITLE, { bold: true, align: AlignmentType.CENTER }),
+      cell("담당", COL_ASSIGNEE, { bold: true, align: AlignmentType.CENTER }),
       cell("상태", COL_STATUS, { bold: true, align: AlignmentType.CENTER }),
-      cell("메모", COL_NOTES, { bold: true, align: AlignmentType.CENTER }),
+      cell("상세", COL_DETAILS, { bold: true, align: AlignmentType.CENTER }),
     ],
   });
 
-  const taskRows = milestone.tasks.map((t) => {
-    const range = formatDateRange({ dateFrom: t.dateFrom, dateTo: t.dateTo }) || "-";
-    return new TableRow({
-      children: [
-        cell(t.title || "-", COL_TITLE),
-        cell(t.assignee || "-", COL_ASSIGNEE, { align: AlignmentType.CENTER }),
-        cell(range, COL_RANGE, { align: AlignmentType.CENTER }),
-        cell(TASK_STATUS_LABEL[t.status], COL_STATUS, { align: AlignmentType.CENTER }),
-        cell(t.notes || "-", COL_NOTES),
-      ],
-    });
-  });
+  const dataRows: TableRow[] = entries.length
+    ? entries.map((e, idx) => {
+        const range = formatDateRange({ dateFrom: e.dateFrom, dateTo: e.dateTo }) || "-";
+        return new TableRow({
+          children: [
+            cell(String(idx + 1), COL_NUM, { align: AlignmentType.CENTER }),
+            cell(range, COL_RANGE, { align: AlignmentType.CENTER }),
+            cell(e.title || "-", COL_TITLE),
+            cell(e.assignee || "-", COL_ASSIGNEE, { align: AlignmentType.CENTER }),
+            cell(TASK_STATUS_LABEL[e.status], COL_STATUS, { align: AlignmentType.CENTER }),
+            cell(e.details || "-", COL_DETAILS),
+          ],
+        });
+      })
+    : [
+        new TableRow({
+          children: [
+            cell(
+              "(등록된 일정 없음)",
+              COL_NUM + COL_RANGE + COL_TITLE + COL_ASSIGNEE + COL_STATUS + COL_DETAILS
+            ),
+          ],
+        }),
+      ];
 
   return new Table({
     width: {
-      size: COL_TITLE + COL_ASSIGNEE + COL_RANGE + COL_STATUS + COL_NOTES,
+      size: COL_NUM + COL_RANGE + COL_TITLE + COL_ASSIGNEE + COL_STATUS + COL_DETAILS,
       type: WidthType.DXA,
     },
-    rows: [headerRow, ...taskRows],
+    rows: [headerRow, ...dataRows],
   });
 }
 
@@ -151,25 +167,12 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
   children.push(heading("5. 산출물"));
   children.push(...multilineParagraphs(data.deliverables));
 
-  // 일정
+  // 일정 (표)
   const totalRange =
     data.startDate || data.endDate ? ` (${data.startDate || ""} ~ ${data.endDate || ""})` : "";
   children.push(heading(`6. 일정${totalRange}`));
-
-  if (data.milestones.length === 0) {
-    children.push(paragraph("(마일스톤 없음)"));
-  } else {
-    data.milestones.forEach((m, mi) => {
-      const range = formatDateRange({ dateFrom: m.dateFrom, dateTo: m.dateTo });
-      const titleLine = `${mi + 1}) ${m.title || "(마일스톤 미입력)"}${range ? ` — ${range}` : ""}`;
-      children.push(paragraph(titleLine, { bold: true }));
-      if (m.description) {
-        children.push(paragraph(m.description));
-      }
-      children.push(buildMilestoneTable(m));
-      children.push(paragraph(""));
-    });
-  }
+  children.push(buildScheduleTable(sortScheduleEntriesByStart(data.scheduleEntries)));
+  children.push(paragraph(""));
 
   children.push(heading("7. 리스크"));
   children.push(...multilineParagraphs(data.risks));

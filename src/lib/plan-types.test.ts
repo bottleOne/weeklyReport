@@ -1,42 +1,47 @@
 import { describe, it, expect } from "vitest";
 import {
   createEmptyPlan,
-  createEmptyMilestone,
-  createEmptyPlanTask,
+  createEmptyScheduleEntry,
+  createScheduleEntryFromRange,
   generatePlanFileName,
+  sortScheduleEntriesByStart,
   TASK_STATUS_LABEL,
   type ProjectPlanData,
+  type PlanScheduleEntry,
 } from "./plan-types";
 
 describe("createEmpty* factories", () => {
-  it("createEmptyPlanTask defaults to status 'todo' with empty fields", () => {
-    const t = createEmptyPlanTask();
-    expect(t.id).toBeTruthy();
-    expect(t.title).toBe("");
-    expect(t.status).toBe("todo");
-    expect(t.assignee).toBe("");
-    expect(t.dateFrom).toBe("");
-    expect(t.dateTo).toBe("");
-    expect(t.notes).toBe("");
+  it("createEmptyScheduleEntry defaults to status 'todo' with empty fields", () => {
+    const e = createEmptyScheduleEntry();
+    expect(e.id).toBeTruthy();
+    expect(e.title).toBe("");
+    expect(e.status).toBe("todo");
+    expect(e.assignee).toBe("");
+    expect(e.dateFrom).toBe("");
+    expect(e.dateTo).toBe("");
+    expect(e.details).toBe("");
   });
 
-  it("createEmptyMilestone seeds one task and unique id", () => {
-    const m = createEmptyMilestone();
-    expect(m.tasks).toHaveLength(1);
-    expect(m.id).not.toBe(m.tasks[0].id);
-  });
-
-  it("createEmptyPlan seeds one milestone and today as createdDate", () => {
+  it("createEmptyPlan starts with empty entries and today as createdDate", () => {
     const p = createEmptyPlan();
-    expect(p.milestones).toHaveLength(1);
+    expect(p.scheduleEntries).toEqual([]);
     expect(p.createdDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(p.title).toBe("");
   });
+});
 
-  it("createEmptyPlan ids are all distinct (plan/milestone/task)", () => {
-    const p = createEmptyPlan();
-    const ids = new Set([p.milestones[0].id, p.milestones[0].tasks[0].id]);
-    expect(ids.size).toBe(2);
+describe("createScheduleEntryFromRange", () => {
+  it("uses both dates when provided", () => {
+    const e = createScheduleEntryFromRange("2026-04-25", "2026-04-30");
+    expect(e.dateFrom).toBe("2026-04-25");
+    expect(e.dateTo).toBe("2026-04-30");
+    expect(e.status).toBe("todo");
+  });
+
+  it("falls back to dateFrom when dateTo is empty (single day)", () => {
+    const e = createScheduleEntryFromRange("2026-04-25", "");
+    expect(e.dateFrom).toBe("2026-04-25");
+    expect(e.dateTo).toBe("2026-04-25");
   });
 });
 
@@ -62,7 +67,7 @@ describe("generatePlanFileName", () => {
     deliverables: "",
     startDate: "",
     endDate: "",
-    milestones: [],
+    scheduleEntries: [],
     risks: "",
     etc: "",
   };
@@ -77,5 +82,38 @@ describe("generatePlanFileName", () => {
     expect(generatePlanFileName({ ...base, teamName: "", title: "" }, "md")).toBe(
       "20260425_프로젝트기획서_팀_기획서.md"
     );
+  });
+});
+
+describe("sortScheduleEntriesByStart", () => {
+  const e = (id: string, dateFrom: string): PlanScheduleEntry => ({
+    id,
+    title: "",
+    dateFrom,
+    dateTo: "",
+    details: "",
+    assignee: "",
+    status: "todo",
+  });
+
+  it("sorts by dateFrom ascending", () => {
+    const sorted = sortScheduleEntriesByStart([
+      e("c", "2026-05-01"),
+      e("a", "2026-04-01"),
+      e("b", "2026-04-15"),
+    ]);
+    expect(sorted.map((x) => x.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("places empty dateFrom at the end", () => {
+    const sorted = sortScheduleEntriesByStart([e("a", ""), e("b", "2026-04-01"), e("c", "")]);
+    expect(sorted[0].id).toBe("b");
+  });
+
+  it("does not mutate input", () => {
+    const input = [e("c", "2026-05-01"), e("a", "2026-04-01")];
+    const inputCopy = [...input];
+    sortScheduleEntriesByStart(input);
+    expect(input).toEqual(inputCopy);
   });
 });

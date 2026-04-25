@@ -15,24 +15,15 @@ const sample: ProjectPlanData = {
   deliverables: "설계서, API, UI",
   startDate: "2026-05-01",
   endDate: "2026-07-31",
-  milestones: [
+  scheduleEntries: [
     {
-      id: "m1",
-      title: "요구사항 확정",
-      description: "이해관계자 인터뷰",
+      id: "e1",
+      title: "현행 권한 분석",
       dateFrom: "2026-05-01",
-      dateTo: "2026-05-15",
-      tasks: [
-        {
-          id: "t1",
-          title: "현행 권한 분석",
-          assignee: "전병일",
-          dateFrom: "2026-05-01",
-          dateTo: "2026-05-07",
-          status: "in_progress",
-          notes: "DB 스키마 포함",
-        },
-      ],
+      dateTo: "2026-05-07",
+      details: "DB 스키마 포함",
+      assignee: "전병일",
+      status: "in_progress",
     },
   ],
   risks: "데이터 마이그레이션 복잡도",
@@ -63,12 +54,20 @@ describe("generatePlanDocxBuffer", () => {
     expect(xml).toContain("8. 기타");
   });
 
-  it("includes milestone title and task with status label", async () => {
+  it("includes schedule table with entry and status label", async () => {
     const buffer = await generatePlanDocxBuffer(sample);
     const xml = await extractDocumentXml(buffer);
-    expect(xml).toContain("요구사항 확정");
     expect(xml).toContain("현행 권한 분석");
     expect(xml).toContain("진행중");
+    expect(xml).toContain("기간");
+    expect(xml).toContain("담당");
+    expect(xml).toContain("상태");
+  });
+
+  it("handles empty entries with placeholder row", async () => {
+    const buffer = await generatePlanDocxBuffer({ ...sample, scheduleEntries: [] });
+    const xml = await extractDocumentXml(buffer);
+    expect(xml).toContain("등록된 일정 없음");
   });
 
   it("matches structural snapshot", async () => {
