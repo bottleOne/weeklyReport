@@ -39,9 +39,12 @@ export default function Home() {
   const [nextRequestTeam, setNextRequestTeam] = useState("");
   const [nextDevPeriodFrom, setNextDevPeriodFrom] = useState("");
   const [nextDevPeriodTo, setNextDevPeriodTo] = useState("");
-  // 공통
+  // 금주 주요이슈/기타
   const [issues, setIssues] = useState("");
   const [etc, setEtc] = useState("");
+  // 차주 주요이슈/기타
+  const [nextIssues, setNextIssues] = useState("");
+  const [nextEtc, setNextEtc] = useState("");
 
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
@@ -76,6 +79,8 @@ export default function Home() {
     setNextDevPeriodTo(persisted.nextDevPeriodTo);
     setIssues(persisted.issues);
     setEtc(persisted.etc);
+    setNextIssues(persisted.nextIssues);
+    setNextEtc(persisted.nextEtc);
     /* eslint-enable react-hooks/set-state-in-effect */
     toast.info("이전 작성 내용을 불러왔습니다.");
   }, []);
@@ -98,6 +103,8 @@ export default function Home() {
     nextDevPeriodTo,
     issues,
     etc,
+    nextIssues,
+    nextEtc,
   };
 
   // 폼 변경 시 디바운스(500ms) 자동 저장
@@ -219,6 +226,8 @@ export default function Home() {
       setNextDevPeriodTo(data.nextDevPeriodTo || "");
       setIssues(data.issues || "");
       setEtc(data.etc || "");
+      setNextIssues(data.nextIssues || "");
+      setNextEtc(data.nextEtc || "");
 
       toast.success("이전 보고서를 불러왔습니다. 내용을 확인하고 수정해주세요.");
     } catch (error) {
@@ -254,6 +263,8 @@ export default function Home() {
           setNextDevPeriodTo("");
           setIssues("");
           setEtc("");
+          setNextIssues("");
+          setNextEtc("");
           setShowPreview(false);
         },
       },
@@ -609,23 +620,52 @@ export default function Home() {
         <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-600">
           💡 주요이슈 & 기타
         </div>
-        <div className="mb-4">
-          <label className="mb-1 block text-xs font-semibold text-gray-700">주요이슈</label>
-          <textarea
-            placeholder="이번 주 주요 이슈 사항을 입력하세요"
-            value={issues}
-            onChange={(e) => setIssues(e.target.value)}
-            className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-700">기타</label>
-          <textarea
-            placeholder="기타 사항을 입력하세요"
-            value={etc}
-            onChange={(e) => setEtc(e.target.value)}
-            className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
-          />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {/* 좌: 금주 실적 */}
+          <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+            <span className="mb-3 block text-xs font-bold text-blue-600">금주 실적</span>
+            <div className="mb-3">
+              <label className="mb-1 block text-xs font-semibold text-gray-700">주요이슈</label>
+              <textarea
+                placeholder="이번 주 주요 이슈 사항을 입력하세요"
+                value={issues}
+                onChange={(e) => setIssues(e.target.value)}
+                className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 bg-white p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-700">기타</label>
+              <textarea
+                placeholder="기타 사항을 입력하세요"
+                value={etc}
+                onChange={(e) => setEtc(e.target.value)}
+                className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 bg-white p-2.5 text-sm transition-colors outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* 우: 차주 계획 */}
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-4">
+            <span className="mb-3 block text-xs font-bold text-emerald-600">차주 계획</span>
+            <div className="mb-3">
+              <label className="mb-1 block text-xs font-semibold text-gray-700">주요이슈</label>
+              <textarea
+                placeholder="다음 주 예상 이슈 사항을 입력하세요"
+                value={nextIssues}
+                onChange={(e) => setNextIssues(e.target.value)}
+                className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 bg-white p-2.5 text-sm transition-colors outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-700">기타</label>
+              <textarea
+                placeholder="다음 주 기타 계획을 입력하세요"
+                value={nextEtc}
+                onChange={(e) => setNextEtc(e.target.value)}
+                className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 bg-white p-2.5 text-sm transition-colors outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

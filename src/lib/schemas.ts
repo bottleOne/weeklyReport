@@ -53,4 +53,6 @@ export const ReportDataSchema = z.object({
   nextDevPeriodTo: z.string(),
   issues: z.string(),
   etc: z.string(),
+  nextIssues: z.string(),
+  nextEtc: z.string(),
 });

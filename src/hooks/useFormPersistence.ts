@@ -7,7 +7,7 @@ import { loadPersisted, clearPersisted, usePersistedState } from "./usePersisted
  * 기존 호출처(`page.tsx`) 호환을 위해 동일 export 유지.
  */
 
-const STORAGE_KEY = "weeklyReport:formState:v1";
+const STORAGE_KEY = "weeklyReport:formState:v2";
 
 export function loadPersistedReport(): ReportData | null {
   return loadPersisted(STORAGE_KEY, ReportDataSchema);

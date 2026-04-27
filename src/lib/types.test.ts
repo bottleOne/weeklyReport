@@ -165,6 +165,8 @@ describe("generateFileName", () => {
     nextDevPeriodTo: "",
     issues: "",
     etc: "",
+    nextIssues: "",
+    nextEtc: "",
   };
 
   it("formats {date}_주간업무_{team}_{author}.{ext}", () => {

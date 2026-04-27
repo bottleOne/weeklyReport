@@ -43,13 +43,15 @@ export async function parseDocxToReportData(buffer: ArrayBuffer): Promise<Report
   const thisWeekResult = parseTasksFromParagraphs(thisWeekParas, year);
   const nextWeekResult = parseTasksFromParagraphs(nextWeekParas, year);
 
-  // Row 3: 주요이슈
+  // Row 3: 주요이슈 (금주 / 차주)
   const row3Cells = extractCellTexts(rows[3]);
   const issues = row3Cells[1]?.text.trim() || "";
+  const nextIssues = row3Cells[2]?.text.trim() || "";
 
-  // Row 4: 기타
+  // Row 4: 기타 (금주 / 차주)
   const row4Cells = extractCellTexts(rows[4]);
   const etc = row4Cells[1]?.text.trim() || "";
+  const nextEtc = row4Cells[2]?.text.trim() || "";
 
   return {
     mode: "employee" as const,
@@ -69,6 +71,8 @@ export async function parseDocxToReportData(buffer: ArrayBuffer): Promise<Report
     nextDevPeriodTo: nextWeekResult.devPeriodTo,
     issues,
     etc,
+    nextIssues,
+    nextEtc,
   };
 }
 

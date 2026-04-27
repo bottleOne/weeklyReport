@@ -48,6 +48,8 @@ const baseEmployee: ReportData = {
   nextDevPeriodTo: "2026-05-02",
   issues: "특이사항 없음",
   etc: "",
+  nextIssues: "",
+  nextEtc: "",
 };
 
 const baseLeader: ReportData = {

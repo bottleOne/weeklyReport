@@ -48,9 +48,12 @@ export interface ReportData {
   nextRequestTeam: string;
   nextDevPeriodFrom: string;
   nextDevPeriodTo: string;
-  // 공통
+  // 금주 주요이슈/기타
   issues: string;
   etc: string;
+  // 차주 주요이슈/기타
+  nextIssues: string;
+  nextEtc: string;
 }
 
 /** UUID 기반 ID 생성. 환경에 randomUUID가 없으면 fallback. */

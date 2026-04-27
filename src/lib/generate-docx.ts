@@ -295,7 +295,7 @@ function buildCommonRows(data: ReportData) {
           children: [
             new Paragraph({
               spacing: CELL_SPACING,
-              children: [new TextRun({ text: "", size: FONT_SIZE })],
+              children: [new TextRun({ text: data.nextIssues || "", size: FONT_SIZE })],
             }),
           ],
         }),
@@ -324,7 +324,7 @@ function buildCommonRows(data: ReportData) {
           children: [
             new Paragraph({
               spacing: CELL_SPACING,
-              children: [new TextRun({ text: "", size: FONT_SIZE })],
+              children: [new TextRun({ text: data.nextEtc || "", size: FONT_SIZE })],
             }),
           ],
         }),

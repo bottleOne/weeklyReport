@@ -156,7 +156,9 @@ export default function PreviewTable({ data }: PreviewTableProps) {
               주요이슈
             </td>
             <td className={`${tdClass} min-h-[40px]`}>{data.issues || ""}</td>
-            <td colSpan={2} className={`${tdClass} min-h-[40px]`}></td>
+            <td colSpan={2} className={`${tdClass} min-h-[40px]`}>
+              {data.nextIssues || ""}
+            </td>
           </tr>
 
           {/* 기타 */}
@@ -165,7 +167,9 @@ export default function PreviewTable({ data }: PreviewTableProps) {
               기타
             </td>
             <td className={`${tdClass} min-h-[40px]`}>{data.etc || ""}</td>
-            <td colSpan={2} className={`${tdClass} min-h-[40px]`}></td>
+            <td colSpan={2} className={`${tdClass} min-h-[40px]`}>
+              {data.nextEtc || ""}
+            </td>
           </tr>
         </tbody>
       </table>
