@@ -15,6 +15,8 @@ interface PlanScheduleCalendarProps {
   onRangeCommit: (range: { from: Date; to: Date }) => void;
   /** entry 띠 클릭 시 — entry id 와 클릭한 셀의 YYYY-MM-DD 모두 전달 */
   onEntryClick?: (entryId: string, cellDate: string) => void;
+  /** 일정이 있는 셀의 빈 영역 단일 클릭 시 — 그 날 모든 일정 보기 모드 */
+  onDayClick?: (cellDate: string) => void;
   onEntryHover?: (entryId: string | null) => void;
   highlightedEntryId?: string | null;
 }
@@ -117,6 +119,7 @@ export default function PlanScheduleCalendar({
   entries,
   onRangeCommit,
   onEntryClick,
+  onDayClick,
   onEntryHover,
   highlightedEntryId,
 }: PlanScheduleCalendarProps) {
@@ -240,15 +243,17 @@ export default function PlanScheduleCalendar({
     [setDraft]
   );
 
-  // 최신 entries/onEntryClick/onEntryHover를 핸들러 안에서 stale 없이 참조하기 위한 ref
+  // 최신 entries/onEntryClick/onEntryHover/onDayClick 을 핸들러 안에서 stale 없이 참조하기 위한 ref
   const entriesRef = useRef(entries);
   const onEntryClickRef = useRef(onEntryClick);
   const onEntryHoverRef = useRef(onEntryHover);
+  const onDayClickRef = useRef(onDayClick);
   useEffect(() => {
     entriesRef.current = entries;
     onEntryClickRef.current = onEntryClick;
     onEntryHoverRef.current = onEntryHover;
-  }, [entries, onEntryClick, onEntryHover]);
+    onDayClickRef.current = onDayClick;
+  }, [entries, onEntryClick, onEntryHover, onDayClick]);
 
   const finishDrag = useCallback(() => {
     const s = stateRef.current;
@@ -258,11 +263,13 @@ export default function PlanScheduleCalendar({
     const final = s.draft;
     setDraft(undefined);
     if (final?.from && final.to) {
-      // 움직임 없는 단일 클릭: 기존 일정 위면 선택, 빈 날짜면 1일짜리 추가
+      // 움직임 없는 단일 클릭:
+      // - 일정 있는 날의 빈 영역 클릭 → 그 날 전체 일정 모드 (onDayClick)
+      // - 일정 없는 날 클릭 → 1일짜리 새 일정 추가 (onRangeCommit)
       if (final.from.getTime() === final.to.getTime()) {
         const hit = findEntryAtDate(final.from, entriesRef.current);
-        if (hit && onEntryClickRef.current) {
-          onEntryClickRef.current(hit.id, ymdLocal(final.from));
+        if (hit) {
+          onDayClickRef.current?.(ymdLocal(final.from));
           return;
         }
       }
@@ -326,6 +333,7 @@ export default function PlanScheduleCalendar({
               return (
                 <div
                   key={ce.entry.id}
+                  className="rdp-day-strip"
                   onMouseDown={(e) => e.stopPropagation()}
                   onMouseEnter={() => onEntryHoverRef.current?.(ce.entry.id)}
                   onMouseLeave={() => onEntryHoverRef.current?.(null)}
@@ -419,6 +427,7 @@ export default function PlanScheduleCalendar({
             )}
             {hasOverflow && (
               <div
+                className="rdp-day-strip"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();

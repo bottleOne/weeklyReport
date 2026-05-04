@@ -65,6 +65,8 @@ export default function PlanPage() {
   const [activeTab, setActiveTab] = useState<PlanTab>("plan");
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
+  // 사이드바 모드 결정: selectedEntryId 있으면 단일 일정 모드, 없고 selectedDate 있으면 그 날짜 전체 모드
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
 
@@ -93,12 +95,21 @@ export default function PlanPage() {
     const entry = createScheduleEntryFromRange(dateFrom, dateTo);
     setPlan((prev) => ({ ...prev, scheduleEntries: [...prev.scheduleEntries, entry] }));
     setSelectedDate(dateFrom);
+    setSelectedEntryId(null); // 새 일정 추가는 그 날 전체 모드로
     toast.success(`기간 추가: ${dateFrom}${dateFrom !== dateTo ? ` ~ ${dateTo}` : ""}`);
   }, []);
 
+  // 일정 띠 / 더보기 드롭다운 항목 클릭 시 — 단일 일정 모드
   const handleEntryClick = useCallback((id: string, cellDate: string) => {
     setSelectedDate(cellDate);
+    setSelectedEntryId(id);
     setHighlightedEntryId(id);
+  }, []);
+
+  // 일정 있는 셀의 빈 영역 클릭 시 — 그 날 전체 일정 모드
+  const handleDayClick = useCallback((cellDate: string) => {
+    setSelectedDate(cellDate);
+    setSelectedEntryId(null);
   }, []);
 
   const updateEntry = useCallback((id: string, field: keyof PlanScheduleEntry, value: string) => {
@@ -115,6 +126,8 @@ export default function PlanPage() {
       ...prev,
       scheduleEntries: prev.scheduleEntries.filter((e) => e.id !== id),
     }));
+    // 단일 일정 모드에서 그 일정을 삭제하면 사이드바를 일자 전체 모드로 강등
+    setSelectedEntryId((cur) => (cur === id ? null : cur));
   }, []);
 
   const resetForm = () => {
@@ -259,7 +272,7 @@ export default function PlanPage() {
 
   // ============== EDIT MODE ==============
   return (
-    <div className="mx-auto max-w-[1600px] p-6">
+    <div className="mx-auto max-w-[1920px] p-6">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -393,69 +406,127 @@ export default function PlanPage() {
                     entries={plan.scheduleEntries}
                     onRangeCommit={handleRangeCommit}
                     onEntryClick={handleEntryClick}
+                    onDayClick={handleDayClick}
                     onEntryHover={setHighlightedEntryId}
                     highlightedEntryId={highlightedEntryId}
                   />
                 </div>
               </div>
 
-              {/* 오른쪽 사이드바: 선택된 날짜의 전체 일정 리스트 */}
-              <aside className="w-full shrink-0 rounded-xl border border-gray-200 bg-white p-5 lg:w-[480px]">
-                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
-                  <span className="flex items-center gap-2">
-                    📝 {selectedDate ? formatDateForHeader(selectedDate) : "세부 일정"}
-                  </span>
-                  {selectedDate && (
-                    <button
-                      onClick={() => setSelectedDate(null)}
-                      className="cursor-pointer rounded-md px-2 py-0.5 text-xs text-indigo-700 transition-colors hover:bg-white"
-                    >
-                      ✕ 닫기
-                    </button>
-                  )}
-                </div>
-                <div className="overflow-y-auto pr-1 lg:max-h-[calc(100vh-200px)]">
-                  {(() => {
-                    if (!selectedDate) {
-                      return (
-                        <p className="py-16 text-center text-sm text-gray-400">
-                          왼쪽 달력에서 일정 또는 날짜를 클릭하면
-                          <br />
-                          그날의 전체 일정이 나타납니다.
-                        </p>
-                      );
-                    }
-                    const entriesForDay = plan.scheduleEntries
-                      .map((entry, originalIdx) => ({ entry, originalIdx }))
-                      .filter(({ entry }) =>
-                        isDateInRange(selectedDate, entry.dateFrom, entry.dateTo)
-                      );
-                    if (entriesForDay.length === 0) {
-                      return (
-                        <p className="py-16 text-center text-sm text-gray-400">
-                          이 날짜에 등록된 일정이 없습니다.
-                        </p>
-                      );
-                    }
+              {/* 오른쪽 사이드바: 단일 일정 모드(selectedEntryId) 또는 그날 전체(selectedDate) */}
+              <aside className="w-full shrink-0 rounded-xl border border-gray-200 bg-white p-5 lg:w-[420px]">
+                {(() => {
+                  // 단일 일정 모드 — 선택된 entry 1개만 표시
+                  if (selectedEntryId) {
+                    const idx = plan.scheduleEntries.findIndex((e) => e.id === selectedEntryId);
+                    const entry = idx >= 0 ? plan.scheduleEntries[idx] : null;
                     return (
-                      <div className="space-y-3">
-                        <p className="px-1 text-xs text-gray-500">
-                          총 {entriesForDay.length}개의 일정
-                        </p>
-                        {entriesForDay.map(({ entry, originalIdx }) => (
-                          <PlanScheduleEntryCard
-                            key={entry.id}
-                            entry={entry}
-                            index={originalIdx}
-                            onChange={updateEntry}
-                            onRemove={removeEntry}
-                            onHover={setHighlightedEntryId}
-                          />
-                        ))}
-                      </div>
+                      <>
+                        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
+                          <span className="flex items-center gap-2 truncate">
+                            📌 {entry?.title || "일정 상세"}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {selectedDate && (
+                              <button
+                                onClick={() => setSelectedEntryId(null)}
+                                className="cursor-pointer rounded-md px-2 py-0.5 text-xs text-indigo-700 transition-colors hover:bg-white"
+                                title="이 날짜의 모든 일정 보기"
+                              >
+                                ← 전체
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedEntryId(null);
+                                setSelectedDate(null);
+                              }}
+                              className="cursor-pointer rounded-md px-2 py-0.5 text-xs text-indigo-700 transition-colors hover:bg-white"
+                            >
+                              ✕ 닫기
+                            </button>
+                          </div>
+                        </div>
+                        <div className="overflow-y-auto pr-1 lg:max-h-[calc(100vh-200px)]">
+                          {entry ? (
+                            <PlanScheduleEntryCard
+                              entry={entry}
+                              index={idx}
+                              onChange={updateEntry}
+                              onRemove={removeEntry}
+                              onHover={setHighlightedEntryId}
+                            />
+                          ) : (
+                            <p className="py-16 text-center text-sm text-gray-400">
+                              선택한 일정을 찾을 수 없습니다.
+                            </p>
+                          )}
+                        </div>
+                      </>
                     );
-                  })()}
-                </div>
+                  }
+
+                  // 일자 전체 모드 — 그 날의 모든 일정 표시
+                  return (
+                    <>
+                      <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
+                        <span className="flex items-center gap-2">
+                          📝 {selectedDate ? formatDateForHeader(selectedDate) : "세부 일정"}
+                        </span>
+                        {selectedDate && (
+                          <button
+                            onClick={() => setSelectedDate(null)}
+                            className="cursor-pointer rounded-md px-2 py-0.5 text-xs text-indigo-700 transition-colors hover:bg-white"
+                          >
+                            ✕ 닫기
+                          </button>
+                        )}
+                      </div>
+                      <div className="overflow-y-auto pr-1 lg:max-h-[calc(100vh-200px)]">
+                        {(() => {
+                          if (!selectedDate) {
+                            return (
+                              <p className="py-16 text-center text-sm text-gray-400">
+                                왼쪽 달력에서 일정 또는 날짜를 클릭하면
+                                <br />
+                                그날의 전체 일정이 나타납니다.
+                              </p>
+                            );
+                          }
+                          const entriesForDay = plan.scheduleEntries
+                            .map((entry, originalIdx) => ({ entry, originalIdx }))
+                            .filter(({ entry }) =>
+                              isDateInRange(selectedDate, entry.dateFrom, entry.dateTo)
+                            );
+                          if (entriesForDay.length === 0) {
+                            return (
+                              <p className="py-16 text-center text-sm text-gray-400">
+                                이 날짜에 등록된 일정이 없습니다.
+                              </p>
+                            );
+                          }
+                          return (
+                            <div className="space-y-3">
+                              <p className="px-1 text-xs text-gray-500">
+                                총 {entriesForDay.length}개의 일정
+                              </p>
+                              {entriesForDay.map(({ entry, originalIdx }) => (
+                                <PlanScheduleEntryCard
+                                  key={entry.id}
+                                  entry={entry}
+                                  index={originalIdx}
+                                  onChange={updateEntry}
+                                  onRemove={removeEntry}
+                                  onHover={setHighlightedEntryId}
+                                />
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  );
+                })()}
               </aside>
             </div>
           )}
