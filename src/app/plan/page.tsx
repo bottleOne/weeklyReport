@@ -42,22 +42,31 @@ function formatLocalDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** YYYY-MM-DD → "2026년 4월 26일 (일)" 같은 한국어 헤더 표기. */
+function formatDateForHeader(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  if (!y || !m || !d) return ymd;
+  const date = new Date(y, m - 1, d);
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  return `${y}년 ${m}월 ${d}일 (${weekday})`;
+}
+
+/** target(YYYY-MM-DD)이 [from, to] 범위(YYYY-MM-DD 문자열) 안에 있는지. */
+function isDateInRange(target: string, from: string, to: string): boolean {
+  if (!from) return false;
+  const end = to || from;
+  const lo = from <= end ? from : end;
+  const hi = from <= end ? end : from;
+  return target >= lo && target <= hi;
+}
+
 export default function PlanPage() {
   const [plan, setPlan] = useState<ProjectPlanData>(() => createEmptyPlan());
   const [activeTab, setActiveTab] = useState<PlanTab>("plan");
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
-
-  // 선택된 일정이 삭제/사라지면 selection 자동 해제
-  useEffect(() => {
-    if (!selectedEntryId) return;
-    if (!plan.scheduleEntries.some((e) => e.id === selectedEntryId)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- scheduleEntries 변경에 따라가는 파생 정리
-      setSelectedEntryId(null);
-    }
-  }, [plan.scheduleEntries, selectedEntryId]);
 
   // 마운트 시 localStorage 복원.
   // SSR 안전: 서버는 localStorage 없음 → 빈 폼 → 클라 마운트 후 복원.
@@ -83,12 +92,13 @@ export default function PlanPage() {
     const dateTo = formatLocalDate(range.to);
     const entry = createScheduleEntryFromRange(dateFrom, dateTo);
     setPlan((prev) => ({ ...prev, scheduleEntries: [...prev.scheduleEntries, entry] }));
-    setSelectedEntryId(entry.id);
+    setSelectedDate(dateFrom);
     toast.success(`기간 추가: ${dateFrom}${dateFrom !== dateTo ? ` ~ ${dateTo}` : ""}`);
   }, []);
 
-  const handleEntryClick = useCallback((id: string) => {
-    setSelectedEntryId(id);
+  const handleEntryClick = useCallback((id: string, cellDate: string) => {
+    setSelectedDate(cellDate);
+    setHighlightedEntryId(id);
   }, []);
 
   const updateEntry = useCallback((id: string, field: keyof PlanScheduleEntry, value: string) => {
@@ -383,18 +393,21 @@ export default function PlanPage() {
                     entries={plan.scheduleEntries}
                     onRangeCommit={handleRangeCommit}
                     onEntryClick={handleEntryClick}
+                    onEntryHover={setHighlightedEntryId}
                     highlightedEntryId={highlightedEntryId}
                   />
                 </div>
               </div>
 
-              {/* 오른쪽 사이드바: 선택된 일정 1개의 상세만 */}
+              {/* 오른쪽 사이드바: 선택된 날짜의 전체 일정 리스트 */}
               <aside className="w-full shrink-0 rounded-xl border border-gray-200 bg-white p-5 lg:w-[480px]">
                 <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
-                  <span className="flex items-center gap-2">📝 세부 일정</span>
-                  {selectedEntryId && (
+                  <span className="flex items-center gap-2">
+                    📝 {selectedDate ? formatDateForHeader(selectedDate) : "세부 일정"}
+                  </span>
+                  {selectedDate && (
                     <button
-                      onClick={() => setSelectedEntryId(null)}
+                      onClick={() => setSelectedDate(null)}
                       className="cursor-pointer rounded-md px-2 py-0.5 text-xs text-indigo-700 transition-colors hover:bg-white"
                     >
                       ✕ 닫기
@@ -403,27 +416,43 @@ export default function PlanPage() {
                 </div>
                 <div className="overflow-y-auto pr-1 lg:max-h-[calc(100vh-200px)]">
                   {(() => {
-                    const selectedIdx = selectedEntryId
-                      ? plan.scheduleEntries.findIndex((e) => e.id === selectedEntryId)
-                      : -1;
-                    const selected = selectedIdx >= 0 ? plan.scheduleEntries[selectedIdx] : null;
-                    if (!selected) {
+                    if (!selectedDate) {
                       return (
                         <p className="py-16 text-center text-sm text-gray-400">
-                          왼쪽 달력에서 일정을 클릭하면
+                          왼쪽 달력에서 일정 또는 날짜를 클릭하면
                           <br />
-                          여기에 상세가 나타납니다.
+                          그날의 전체 일정이 나타납니다.
+                        </p>
+                      );
+                    }
+                    const entriesForDay = plan.scheduleEntries
+                      .map((entry, originalIdx) => ({ entry, originalIdx }))
+                      .filter(({ entry }) =>
+                        isDateInRange(selectedDate, entry.dateFrom, entry.dateTo)
+                      );
+                    if (entriesForDay.length === 0) {
+                      return (
+                        <p className="py-16 text-center text-sm text-gray-400">
+                          이 날짜에 등록된 일정이 없습니다.
                         </p>
                       );
                     }
                     return (
-                      <PlanScheduleEntryCard
-                        entry={selected}
-                        index={selectedIdx}
-                        onChange={updateEntry}
-                        onRemove={removeEntry}
-                        onHover={setHighlightedEntryId}
-                      />
+                      <div className="space-y-3">
+                        <p className="px-1 text-xs text-gray-500">
+                          총 {entriesForDay.length}개의 일정
+                        </p>
+                        {entriesForDay.map(({ entry, originalIdx }) => (
+                          <PlanScheduleEntryCard
+                            key={entry.id}
+                            entry={entry}
+                            index={originalIdx}
+                            onChange={updateEntry}
+                            onRemove={removeEntry}
+                            onHover={setHighlightedEntryId}
+                          />
+                        ))}
+                      </div>
                     );
                   })()}
                 </div>

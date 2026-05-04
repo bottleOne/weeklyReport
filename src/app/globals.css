@@ -66,15 +66,35 @@ textarea {
 .rdp-month_grid {
   table-layout: fixed !important;
   border-collapse: separate !important;
-  border-spacing: 0 4px !important; /* 가로 0 / 행 간 4px */
+  border-spacing: 0 !important; /* 칸 구분선을 직접 그려 그리드 형태로 */
 }
 /* 셀과 버튼 spacing 0, 버튼 배경은 투명 (셀의 인라인 색이 보이도록) */
 .rdp-day {
   padding: 0 !important;
   margin: 0 !important;
-  border: 0 !important;
   height: 90px !important;
   vertical-align: top !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.05) !important; /* 세로 칸 구분 (gray-200) */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important; /* 가로 칸 구분 */
+}
+/* 행 내 마지막 칸은 오른쪽 경계 중복 방지 */
+.rdp-week .rdp-day:last-child {
+  border-right: 0 !important;
+}
+/* 마지막 주의 셀들은 아래쪽 경계 중복 방지 */
+.rdp-weeks tr:last-child .rdp-day {
+  border-bottom: 0 !important;
+}
+/* 헤더(요일 행)와 첫 주 사이 가로선 */
+.rdp-weekdays {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+.rdp-weekday {
+  border-right: 1px solid rgba(0, 0, 0, 0.05) !important;
+  padding: 6px 0 !important;
+}
+.rdp-weekday:last-child {
+  border-right: 0 !important;
 }
 .rdp-day_button {
   width: 100% !important;
@@ -87,10 +107,27 @@ textarea {
   background: transparent !important;
   color: inherit !important; /* 셀의 color(range 흰색 등) 상속 */
   box-sizing: border-box;
+  cursor: pointer !important;
+  transition:
+    background-color 0.12s ease,
+    box-shadow 0.12s ease !important;
   /* 일자 라벨/일정 띠는 PlanScheduleCalendar의 커스텀 DayButton에서 absolute 배치 */
 }
+/* 셀 hover/focus 시 드래그 직전의 미리보기처럼 살짝 인디고 wash + 안쪽 라인 */
+.rdp-day_button:hover {
+  background: rgba(99, 102, 241, 0.08) !important; /* indigo-500 8% */
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.25) !important;
+}
+.rdp-day_button:focus-visible {
+  background: rgba(99, 102, 241, 0.1) !important;
+  box-shadow: inset 0 0 0 2px #6366f1 !important;
+}
+.rdp-day_button:active {
+  background: rgba(99, 102, 241, 0.18) !important;
+  box-shadow: inset 0 0 0 1px #6366f1 !important;
+}
 .rdp-weeks {
-  gap: 4px 0 !important; /* row 4px, column 0 */
+  gap: 0 !important; /* 행 간 간격 제거 — bottom border로 구분 */
 }
 .rdp-week {
   gap: 0 !important;
