@@ -203,10 +203,17 @@ export default function PlanScheduleCalendar({
   // 어떤 셀의 "더보기" 드롭다운이 열려 있는지. dateKey 기준으로 1개만 열림.
   const [openCell, setOpenCell] = useState<{ dateKey: string; cellDate: string } | null>(null);
 
-  // 드롭다운 외부 클릭 시 닫기. "..." 띠와 드롭다운 자체는 stopPropagation으로 가드한다.
+  // 드롭다운 외부 클릭 시 닫기. document에 native listener라 React stopPropagation으로 못 막음 →
+  // target이 드롭다운/일정 띠/"..." 띠 안이면 무시 (그쪽 자체 onClick에서 토글/항목 처리).
   useEffect(() => {
     if (!openCell) return;
-    const close = () => setOpenCell(null);
+    const close = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest(".rdp-day-dropdown")) return;
+      if (target.closest(".rdp-day-strip")) return;
+      setOpenCell(null);
+    };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [openCell]);
@@ -466,6 +473,7 @@ export default function PlanScheduleCalendar({
             )}
             {isDropdownOpen && (
               <div
+                className="rdp-day-dropdown"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
                 style={{

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { PlanScheduleEntry, TaskStatus } from "@/lib/plan-types";
 import { TASK_STATUS_LABEL } from "@/lib/plan-types";
 import { formatDateRange } from "@/lib/types";
@@ -29,6 +30,27 @@ export default function PlanScheduleEntryCard({
   const range =
     formatDateRange({ dateFrom: entry.dateFrom, dateTo: entry.dateTo }) || "(기간 미정)";
 
+  // 마운트: 빈 제목 카드는 제목 input에 자동 focus.
+  // 언마운트: 빈 제목이면 자동 삭제 (어떤 액션으로 카드가 사라지든 빈 일정 잔류 방지).
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const entryRef = useRef(entry);
+  const onRemoveRef = useRef(onRemove);
+  useEffect(() => {
+    entryRef.current = entry;
+    onRemoveRef.current = onRemove;
+  });
+  useEffect(() => {
+    if (entryRef.current.title === "") {
+      titleInputRef.current?.focus();
+    }
+    return () => {
+      if (entryRef.current.title.trim() === "") {
+        onRemoveRef.current?.(entryRef.current.id);
+      }
+    };
+    // mount/unmount 1회씩만 — title 변경에 따라 재실행하지 않음 (의존은 ref로만 참조)
+  }, []);
+
   return (
     <div
       onMouseEnter={() => onHover(entry.id)}
@@ -40,10 +62,14 @@ export default function PlanScheduleEntryCard({
           {index + 1}
         </span>
         <input
+          ref={titleInputRef}
           type="text"
           placeholder="일정 제목 (예: 요구사항 정의 마감)"
           value={entry.title}
           onChange={(e) => onChange(entry.id, "title", e.target.value)}
+          onBlur={(e) => {
+            if (e.target.value.trim() === "") onRemove(entry.id);
+          }}
           className="flex-1 border-b-2 border-gray-300 bg-transparent pb-1 text-base font-semibold transition-colors outline-none focus:border-indigo-500"
         />
         <button
