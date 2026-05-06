@@ -23,6 +23,17 @@ export interface PlanScheduleEntry {
   status: TaskStatus;
 }
 
+/**
+ * 미결사항 — 기획 단계에서 답이 없는 질문을 명시.
+ * resolved=true면 resolution 답변 노출.
+ */
+export interface OpenQuestionItem {
+  id: string;
+  question: string;
+  resolved: boolean;
+  resolution: string;
+}
+
 export interface ProjectPlanData {
   // 기본 정보
   title: string;
@@ -36,6 +47,10 @@ export interface ProjectPlanData {
   scope: string;
   stakeholders: string;
   deliverables: string;
+
+  // 범위 외 + 미결사항 (Phase 1)
+  nonGoals: string;
+  openQuestions: OpenQuestionItem[];
 
   // 일정 (캘린더 + 항목 리스트)
   startDate: string;
@@ -82,12 +97,31 @@ export function createEmptyPlan(): ProjectPlanData {
     scope: "",
     stakeholders: "",
     deliverables: "",
+    nonGoals: "",
+    openQuestions: [],
     startDate: "",
     endDate: "",
     scheduleEntries: [],
     risks: "",
     etc: "",
   };
+}
+
+export function createEmptyOpenQuestion(): OpenQuestionItem {
+  return {
+    id: newId(),
+    question: "",
+    resolved: false,
+    resolution: "",
+  };
+}
+
+/**
+ * 미결사항 정렬 — 미해결을 위로, 해결된 것을 아래로 (안정 정렬).
+ * 원본 불변, 새 배열 반환.
+ */
+export function sortOpenQuestions(items: OpenQuestionItem[]): OpenQuestionItem[] {
+  return [...items].sort((a, b) => Number(a.resolved) - Number(b.resolved));
 }
 
 export function generatePlanFileName(data: ProjectPlanData, ext: string): string {

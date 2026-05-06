@@ -13,6 +13,8 @@ const sample: ProjectPlanData = {
   scope: "포함: 권한 모델",
   stakeholders: "기획팀, 보안팀",
   deliverables: "설계서, API, UI",
+  nonGoals: "외부 SSO 통합",
+  openQuestions: [{ id: "q1", question: "외부 SSO 적용 시기는?", resolved: false, resolution: "" }],
   startDate: "2026-05-01",
   endDate: "2026-07-31",
   scheduleEntries: [
@@ -43,15 +45,24 @@ describe("generatePlanDocxBuffer", () => {
     expect(buffer.length).toBeGreaterThan(1000);
   });
 
-  it("includes title, metadata, and section headings", async () => {
+  it("includes title, metadata, and renumbered section headings", async () => {
     const buffer = await generatePlanDocxBuffer(sample);
     const xml = await extractDocumentXml(buffer);
     expect(xml).toContain("비즈메카 인사 모듈 개편");
     expect(xml).toContain("개발2팀");
     expect(xml).toContain("전병일");
     expect(xml).toContain("1. 배경 / 필요성");
-    expect(xml).toContain("6. 일정");
-    expect(xml).toContain("8. 기타");
+    expect(xml).toContain("6. 범위 외 (Non-goals)");
+    expect(xml).toContain("7. 미결사항");
+    expect(xml).toContain("8. 일정");
+    expect(xml).toContain("9. 리스크");
+    expect(xml).toContain("10. 기타");
+  });
+
+  it("renders open questions with checkbox glyph", async () => {
+    const buffer = await generatePlanDocxBuffer(sample);
+    const xml = await extractDocumentXml(buffer);
+    expect(xml).toContain("☐ 외부 SSO 적용 시기는?");
   });
 
   it("includes schedule table with entry and status label", async () => {

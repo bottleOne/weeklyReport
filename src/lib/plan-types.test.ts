@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
+  createEmptyOpenQuestion,
   createEmptyPlan,
   createEmptyScheduleEntry,
   createScheduleEntryFromRange,
   generatePlanFileName,
+  sortOpenQuestions,
   sortScheduleEntriesByStart,
   TASK_STATUS_LABEL,
+  type OpenQuestionItem,
   type ProjectPlanData,
   type PlanScheduleEntry,
 } from "./plan-types";
@@ -27,6 +30,20 @@ describe("createEmpty* factories", () => {
     expect(p.scheduleEntries).toEqual([]);
     expect(p.createdDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(p.title).toBe("");
+  });
+
+  it("createEmptyPlan includes Phase 1 fields with empty defaults", () => {
+    const p = createEmptyPlan();
+    expect(p.nonGoals).toBe("");
+    expect(p.openQuestions).toEqual([]);
+  });
+
+  it("createEmptyOpenQuestion defaults to unresolved with blank fields", () => {
+    const q = createEmptyOpenQuestion();
+    expect(q.id).toBeTruthy();
+    expect(q.question).toBe("");
+    expect(q.resolved).toBe(false);
+    expect(q.resolution).toBe("");
   });
 });
 
@@ -65,6 +82,8 @@ describe("generatePlanFileName", () => {
     scope: "",
     stakeholders: "",
     deliverables: "",
+    nonGoals: "",
+    openQuestions: [],
     startDate: "",
     endDate: "",
     scheduleEntries: [],
@@ -115,5 +134,26 @@ describe("sortScheduleEntriesByStart", () => {
     const inputCopy = [...input];
     sortScheduleEntriesByStart(input);
     expect(input).toEqual(inputCopy);
+  });
+});
+
+describe("sortOpenQuestions", () => {
+  const q = (id: string, resolved: boolean): OpenQuestionItem => ({
+    id,
+    question: id,
+    resolved,
+    resolution: "",
+  });
+
+  it("places unresolved before resolved (stable)", () => {
+    const sorted = sortOpenQuestions([q("a", true), q("b", false), q("c", true), q("d", false)]);
+    expect(sorted.map((x) => x.id)).toEqual(["b", "d", "a", "c"]);
+  });
+
+  it("does not mutate input", () => {
+    const input = [q("a", true), q("b", false)];
+    const copy = [...input];
+    sortOpenQuestions(input);
+    expect(input).toEqual(copy);
   });
 });

@@ -13,8 +13,9 @@ const MONTHS_BEFORE_TODAY = 1;
 interface PlanScheduleCalendarProps {
   entries: PlanScheduleEntry[];
   onRangeCommit: (range: { from: Date; to: Date }) => void;
-  /** entry 띠 클릭 시 — entry id 와 클릭한 셀의 YYYY-MM-DD 모두 전달 */
-  onEntryClick?: (entryId: string, cellDate: string) => void;
+  /** entry 띠 / 더보기 항목 클릭 시 — entry 자체 + 클릭한 셀의 YYYY-MM-DD 전달.
+   *  caller는 entry.title 검사 등 추가 분기를 할 수 있다. */
+  onEntryClick?: (entry: PlanScheduleEntry, cellDate: string) => void;
   /** 일정이 있는 셀의 빈 영역 단일 클릭 시 — 그 날 모든 일정 보기 모드 */
   onDayClick?: (cellDate: string) => void;
   onEntryHover?: (entryId: string | null) => void;
@@ -346,7 +347,7 @@ export default function PlanScheduleCalendar({
                   onMouseLeave={() => onEntryHoverRef.current?.(null)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEntryClickRef.current?.(ce.entry.id, ymdLocal(day.date));
+                    onEntryClickRef.current?.(ce.entry, ymdLocal(day.date));
                   }}
                   title={ce.entry.title || "일정"}
                   style={{
@@ -516,14 +517,14 @@ export default function PlanScheduleCalendar({
                       onMouseLeave={() => onEntryHoverRef.current?.(null)}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onEntryClickRef.current?.(ce.entry.id, cellYmd);
+                        onEntryClickRef.current?.(ce.entry, cellYmd);
                         setOpenCell(null);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           e.stopPropagation();
-                          onEntryClickRef.current?.(ce.entry.id, cellYmd);
+                          onEntryClickRef.current?.(ce.entry, cellYmd);
                           setOpenCell(null);
                         }
                       }}

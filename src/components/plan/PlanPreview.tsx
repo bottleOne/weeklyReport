@@ -1,7 +1,7 @@
 "use client";
 
-import type { ProjectPlanData } from "@/lib/plan-types";
-import { TASK_STATUS_LABEL, sortScheduleEntriesByStart } from "@/lib/plan-types";
+import type { ProjectPlanData, OpenQuestionItem } from "@/lib/plan-types";
+import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "@/lib/plan-types";
 import { formatDateRange } from "@/lib/types";
 
 interface PlanPreviewProps {
@@ -38,8 +38,12 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
       <Section title="3. 범위">{paragraph(data.scope)}</Section>
       <Section title="4. 이해관계자">{paragraph(data.stakeholders)}</Section>
       <Section title="5. 산출물">{paragraph(data.deliverables)}</Section>
+      <Section title="6. 범위 외 (Non-goals)">{paragraph(data.nonGoals)}</Section>
+      <Section title="7. 미결사항">
+        <OpenQuestionsBlock items={data.openQuestions} />
+      </Section>
 
-      <Section title={`6. 일정 (${totalRange})`}>
+      <Section title={`8. 일정 (${totalRange})`}>
         {sorted.length === 0 ? (
           <span className="text-gray-400">(등록된 일정 없음)</span>
         ) : (
@@ -72,8 +76,8 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
         )}
       </Section>
 
-      <Section title="7. 리스크">{paragraph(data.risks)}</Section>
-      <Section title="8. 기타">{paragraph(data.etc)}</Section>
+      <Section title="9. 리스크">{paragraph(data.risks)}</Section>
+      <Section title="10. 기타">{paragraph(data.etc)}</Section>
     </div>
   );
 }
@@ -84,5 +88,27 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-2 border-b border-gray-200 pb-1 text-base font-bold">{title}</h2>
       <div className="pl-2">{children}</div>
     </div>
+  );
+}
+
+function OpenQuestionsBlock({ items }: { items: OpenQuestionItem[] }) {
+  if (items.length === 0) return <span className="text-gray-400">(미입력)</span>;
+  const sorted = sortOpenQuestions(items);
+  return (
+    <ul className="space-y-1.5">
+      {sorted.map((q) => (
+        <li key={q.id} className="leading-relaxed">
+          <span className="mr-1.5 inline-block w-4 align-text-top">{q.resolved ? "☑" : "☐"}</span>
+          <span className={q.resolved ? "text-gray-500 line-through" : "font-medium text-gray-900"}>
+            {q.question.trim() || "(빈 질문)"}
+          </span>
+          {q.resolved && q.resolution.trim() && (
+            <div className="mt-0.5 ml-6 text-xs whitespace-pre-wrap text-gray-600">
+              └ {q.resolution.trim()}
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -12,6 +12,11 @@ const sample: ProjectPlanData = {
   scope: "포함: 권한 모델 / 제외: 외부 SSO",
   stakeholders: "기획팀, 보안팀",
   deliverables: "설계서, API, UI",
+  nonGoals: "외부 SSO 통합\n모바일 전용 화면",
+  openQuestions: [
+    { id: "q1", question: "외부 SSO 적용 시기는?", resolved: false, resolution: "" },
+    { id: "q2", question: "권한 모델 명칭 표준?", resolved: true, resolution: "RBAC v2 채택" },
+  ],
   startDate: "2026-05-01",
   endDate: "2026-07-31",
   scheduleEntries: [
@@ -47,16 +52,30 @@ describe("generatePlanMarkdown", () => {
     expect(md).toContain("2026-04-25");
   });
 
-  it("renders all 8 sections", () => {
+  it("renders all 10 sections in renumbered order", () => {
     const md = generatePlanMarkdown(sample);
     expect(md).toContain("## 1. 배경");
     expect(md).toContain("## 2. 목표");
     expect(md).toContain("## 3. 범위");
     expect(md).toContain("## 4. 이해관계자");
     expect(md).toContain("## 5. 산출물");
-    expect(md).toContain("## 6. 일정");
-    expect(md).toContain("## 7. 리스크");
-    expect(md).toContain("## 8. 기타");
+    expect(md).toContain("## 6. 범위 외 (Non-goals)");
+    expect(md).toContain("## 7. 미결사항");
+    expect(md).toContain("## 8. 일정");
+    expect(md).toContain("## 9. 리스크");
+    expect(md).toContain("## 10. 기타");
+  });
+
+  it("renders open questions with checkbox + indented resolution", () => {
+    const md = generatePlanMarkdown(sample);
+    // unresolved 먼저
+    const idxQ1 = md.indexOf("외부 SSO 적용 시기는?");
+    const idxQ2 = md.indexOf("권한 모델 명칭 표준?");
+    expect(idxQ1).toBeGreaterThan(-1);
+    expect(idxQ2).toBeGreaterThan(idxQ1);
+    expect(md).toContain("- [ ] 외부 SSO 적용 시기는?");
+    expect(md).toContain("- [x] 권한 모델 명칭 표준?");
+    expect(md).toContain("**답변**: RBAC v2 채택");
   });
 
   it("renders schedule table with sorted entries and status labels", () => {

@@ -17,6 +17,15 @@ export const PlanScheduleEntrySchema = z.object({
   status: TaskStatusSchema,
 });
 
+export const OpenQuestionItemSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  resolved: z.boolean(),
+  resolution: z.string(),
+});
+
+// 새 필드(nonGoals, openQuestions)는 Phase 1 도입.
+// v2 localStorage 호환을 위해 default 값을 부여 → 기존 사용자는 빈 값으로 부드럽게 마이그레이션.
 export const ProjectPlanDataSchema = z.object({
   title: z.string(),
   authorName: z.string(),
@@ -27,6 +36,8 @@ export const ProjectPlanDataSchema = z.object({
   scope: z.string(),
   stakeholders: z.string(),
   deliverables: z.string(),
+  nonGoals: z.string().default(""),
+  openQuestions: z.array(OpenQuestionItemSchema).default([]),
   startDate: z.string(),
   endDate: z.string(),
   scheduleEntries: z.array(PlanScheduleEntrySchema),

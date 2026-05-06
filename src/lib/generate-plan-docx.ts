@@ -12,8 +12,8 @@ import {
   HeadingLevel,
   VerticalAlign,
 } from "docx";
-import type { ProjectPlanData, PlanScheduleEntry } from "./plan-types";
-import { TASK_STATUS_LABEL, sortScheduleEntriesByStart } from "./plan-types";
+import type { ProjectPlanData, PlanScheduleEntry, OpenQuestionItem } from "./plan-types";
+import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "./plan-types";
 import { formatDateRange } from "./types";
 
 const FONT_SIZE = 20; // 10pt
@@ -51,6 +51,27 @@ function heading(text: string): Paragraph {
 function multilineParagraphs(text: string): Paragraph[] {
   if (!text.trim()) return [paragraph("(미입력)")];
   return text.split("\n").map((line) => paragraph(line));
+}
+
+/** 미결사항 list — 체크박스 + 질문 + (해결 시) 답변 들여쓰기. */
+function openQuestionParagraphs(items: OpenQuestionItem[]): Paragraph[] {
+  if (items.length === 0) return [paragraph("(미입력)")];
+  const out: Paragraph[] = [];
+  for (const q of sortOpenQuestions(items)) {
+    const checkbox = q.resolved ? "☑" : "☐";
+    const text = q.question.trim() || "(빈 질문)";
+    out.push(paragraph(`${checkbox} ${text}`));
+    if (q.resolved && q.resolution.trim()) {
+      out.push(
+        new Paragraph({
+          spacing: { after: 80, line: 280 },
+          indent: { left: 360 },
+          children: [makeText(`└ ${q.resolution.trim()}`)],
+        })
+      );
+    }
+  }
+  return out;
 }
 
 function cell(
@@ -167,17 +188,23 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
   children.push(heading("5. 산출물"));
   children.push(...multilineParagraphs(data.deliverables));
 
+  children.push(heading("6. 범위 외 (Non-goals)"));
+  children.push(...multilineParagraphs(data.nonGoals));
+
+  children.push(heading("7. 미결사항"));
+  children.push(...openQuestionParagraphs(data.openQuestions));
+
   // 일정 (표)
   const totalRange =
     data.startDate || data.endDate ? ` (${data.startDate || ""} ~ ${data.endDate || ""})` : "";
-  children.push(heading(`6. 일정${totalRange}`));
+  children.push(heading(`8. 일정${totalRange}`));
   children.push(buildScheduleTable(sortScheduleEntriesByStart(data.scheduleEntries)));
   children.push(paragraph(""));
 
-  children.push(heading("7. 리스크"));
+  children.push(heading("9. 리스크"));
   children.push(...multilineParagraphs(data.risks));
 
-  children.push(heading("8. 기타"));
+  children.push(heading("10. 기타"));
   children.push(...multilineParagraphs(data.etc));
 
   const doc = new Document({

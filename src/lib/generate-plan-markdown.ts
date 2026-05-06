@@ -1,5 +1,5 @@
 import type { ProjectPlanData } from "./plan-types";
-import { TASK_STATUS_LABEL, sortScheduleEntriesByStart } from "./plan-types";
+import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "./plan-types";
 import { formatDateRange } from "./types";
 
 /** ProjectPlanData를 Markdown 문자열로 직렬화. 클라이언트에서 직접 호출. */
@@ -18,10 +18,12 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
   pushSection(lines, "3. 범위", data.scope);
   pushSection(lines, "4. 이해관계자", data.stakeholders);
   pushSection(lines, "5. 산출물", data.deliverables);
+  pushSection(lines, "6. 범위 외 (Non-goals)", data.nonGoals);
+  pushOpenQuestions(lines, data);
 
   const totalRange =
     data.startDate || data.endDate ? ` (${data.startDate || ""} ~ ${data.endDate || ""})` : "";
-  lines.push(`## 6. 일정${totalRange}`);
+  lines.push(`## 8. 일정${totalRange}`);
   lines.push("");
 
   const sorted = sortScheduleEntriesByStart(data.scheduleEntries);
@@ -42,8 +44,8 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
     lines.push("");
   }
 
-  pushSection(lines, "7. 리스크", data.risks);
-  pushSection(lines, "8. 기타", data.etc);
+  pushSection(lines, "9. 리스크", data.risks);
+  pushSection(lines, "10. 기타", data.etc);
 
   return lines.join("\n");
 }
@@ -52,5 +54,26 @@ function pushSection(lines: string[], heading: string, body: string): void {
   lines.push(`## ${heading}`);
   lines.push("");
   lines.push(body.trim() ? body : "(미입력)");
+  lines.push("");
+}
+
+function pushOpenQuestions(lines: string[], data: ProjectPlanData): void {
+  lines.push("## 7. 미결사항");
+  lines.push("");
+  if (data.openQuestions.length === 0) {
+    lines.push("(미입력)");
+    lines.push("");
+    return;
+  }
+  for (const q of sortOpenQuestions(data.openQuestions)) {
+    const checkbox = q.resolved ? "[x]" : "[ ]";
+    const text = q.question.trim() || "(빈 질문)";
+    lines.push(`- ${checkbox} ${text}`);
+    if (q.resolved && q.resolution.trim()) {
+      // 답변은 들여쓰기로 부속 표기
+      const indented = q.resolution.trim().split("\n").join("\n  ");
+      lines.push(`  - **답변**: ${indented}`);
+    }
+  }
   lines.push("");
 }

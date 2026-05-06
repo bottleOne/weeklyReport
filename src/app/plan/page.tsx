@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import type { ProjectPlanData, PlanScheduleEntry } from "@/lib/plan-types";
+import type { ProjectPlanData, PlanScheduleEntry, OpenQuestionItem } from "@/lib/plan-types";
 import {
   createEmptyPlan,
+  createEmptyOpenQuestion,
   createScheduleEntryFromRange,
   generatePlanFileName,
 } from "@/lib/plan-types";
@@ -13,6 +14,8 @@ import { loadPersisted, clearPersisted, usePersistedState } from "@/hooks/usePer
 import { generatePlanMarkdown } from "@/lib/generate-plan-markdown";
 import PlanInfoSection from "@/components/plan/PlanInfoSection";
 import PlanTextSection from "@/components/plan/PlanTextSection";
+import PlanNonGoalsSection from "@/components/plan/PlanNonGoalsSection";
+import PlanOpenQuestionsSection from "@/components/plan/PlanOpenQuestionsSection";
 import PlanScheduleCalendar from "@/components/plan/PlanScheduleCalendar";
 import PlanScheduleEntryCard from "@/components/plan/PlanScheduleEntryCard";
 import PlanPreview from "@/components/plan/PlanPreview";
@@ -67,6 +70,8 @@ export default function PlanPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
   // 사이드바 모드 결정: selectedEntryId 있으면 단일 일정 모드, 없고 selectedDate 있으면 그 날짜 전체 모드
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  // 새로 추가된 미결사항 id — 마운트 시 question input 자동 focus용. focused 후 null로 풀림.
+  const [focusOpenQuestionId, setFocusOpenQuestionId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
 
@@ -99,11 +104,21 @@ export default function PlanPage() {
     toast.success(`기간 추가: ${dateFrom}${dateFrom !== dateTo ? ` ~ ${dateTo}` : ""}`);
   }, []);
 
-  // 일정 띠 / 더보기 드롭다운 항목 클릭 시 — 단일 일정 모드
-  const handleEntryClick = useCallback((id: string, cellDate: string) => {
+  // 일정 띠 / 더보기 드롭다운 항목 클릭 시
+  // - 제목이 비어있는 일정 → 그 자리에서 삭제 (사이드바 변화 없음)
+  // - 제목이 있는 일정 → 단일 일정 모드 사이드바 열기
+  const handleEntryClick = useCallback((entry: PlanScheduleEntry, cellDate: string) => {
+    if (entry.title.trim() === "") {
+      setPlan((prev) => ({
+        ...prev,
+        scheduleEntries: prev.scheduleEntries.filter((e) => e.id !== entry.id),
+      }));
+      setSelectedEntryId((cur) => (cur === entry.id ? null : cur));
+      return;
+    }
     setSelectedDate(cellDate);
-    setSelectedEntryId(id);
-    setHighlightedEntryId(id);
+    setSelectedEntryId(entry.id);
+    setHighlightedEntryId(entry.id);
   }, []);
 
   // 일정 있는 셀의 빈 영역 클릭 시 — 그 날 전체 일정 모드
@@ -128,6 +143,27 @@ export default function PlanPage() {
     }));
     // 단일 일정 모드에서 그 일정을 삭제하면 사이드바를 일자 전체 모드로 강등
     setSelectedEntryId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  // ===== 미결사항 (Open Questions) =====
+  const addOpenQuestion = useCallback(() => {
+    const item = createEmptyOpenQuestion();
+    setPlan((prev) => ({ ...prev, openQuestions: [...prev.openQuestions, item] }));
+    setFocusOpenQuestionId(item.id);
+  }, []);
+
+  const updateOpenQuestion = useCallback((id: string, patch: Partial<OpenQuestionItem>) => {
+    setPlan((prev) => ({
+      ...prev,
+      openQuestions: prev.openQuestions.map((q) => (q.id === id ? { ...q, ...patch } : q)),
+    }));
+  }, []);
+
+  const removeOpenQuestion = useCallback((id: string) => {
+    setPlan((prev) => ({
+      ...prev,
+      openQuestions: prev.openQuestions.filter((q) => q.id !== id),
+    }));
   }, []);
 
   const resetForm = () => {
@@ -364,6 +400,18 @@ export default function PlanPage() {
                     value as ProjectPlanData[keyof ProjectPlanData]
                   )
                 }
+              />
+              <PlanNonGoalsSection
+                value={plan.nonGoals}
+                onChange={(value) => updateField("nonGoals", value)}
+              />
+              <PlanOpenQuestionsSection
+                items={plan.openQuestions}
+                onAdd={addOpenQuestion}
+                onChange={updateOpenQuestion}
+                onRemove={removeOpenQuestion}
+                focusId={focusOpenQuestionId}
+                onFocused={() => setFocusOpenQuestionId(null)}
               />
               <div className="rounded-xl border border-gray-200 bg-white p-5">
                 <div className="mb-4 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">

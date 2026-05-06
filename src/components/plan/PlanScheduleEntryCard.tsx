@@ -30,25 +30,18 @@ export default function PlanScheduleEntryCard({
   const range =
     formatDateRange({ dateFrom: entry.dateFrom, dateTo: entry.dateTo }) || "(기간 미정)";
 
-  // 마운트: 빈 제목 카드는 제목 input에 자동 focus.
-  // 언마운트: 빈 제목이면 자동 삭제 (어떤 액션으로 카드가 사라지든 빈 일정 잔류 방지).
+  // 마운트: 빈 제목 카드는 제목 input에 자동 focus → 사용자가 다른 곳을 클릭하면
+  // input의 onBlur가 트리거되어 빈 제목이면 자동 삭제됨.
+  //
+  // unmount cleanup은 의도적으로 두지 않는다 — React Strict Mode에서
+  // mount→unmount→re-mount 사이클의 첫 unmount가 cleanup을 즉시 호출해
+  // 방금 추가한 일정이 사라지는 문제가 발생함.
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const entryRef = useRef(entry);
-  const onRemoveRef = useRef(onRemove);
+  const initialTitleRef = useRef(entry.title);
   useEffect(() => {
-    entryRef.current = entry;
-    onRemoveRef.current = onRemove;
-  });
-  useEffect(() => {
-    if (entryRef.current.title === "") {
+    if (initialTitleRef.current === "") {
       titleInputRef.current?.focus();
     }
-    return () => {
-      if (entryRef.current.title.trim() === "") {
-        onRemoveRef.current?.(entryRef.current.id);
-      }
-    };
-    // mount/unmount 1회씩만 — title 변경에 따라 재실행하지 않음 (의존은 ref로만 참조)
   }, []);
 
   return (
@@ -67,9 +60,6 @@ export default function PlanScheduleEntryCard({
           placeholder="일정 제목 (예: 요구사항 정의 마감)"
           value={entry.title}
           onChange={(e) => onChange(entry.id, "title", e.target.value)}
-          onBlur={(e) => {
-            if (e.target.value.trim() === "") onRemove(entry.id);
-          }}
           className="flex-1 border-b-2 border-gray-300 bg-transparent pb-1 text-base font-semibold transition-colors outline-none focus:border-indigo-500"
         />
         <button
