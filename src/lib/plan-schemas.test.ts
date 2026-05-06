@@ -63,3 +63,67 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
     });
   });
 });
+
+describe("ProjectPlanDataSchema — Phase 2 backward compatibility", () => {
+  it("parses payload missing Phase 2 fields and fills empty defaults", () => {
+    const payload = {
+      title: "",
+      authorName: "",
+      teamName: "",
+      createdDate: "2026-05-07",
+      background: "",
+      objective: "",
+      scope: "",
+      stakeholders: "",
+      deliverables: "",
+      // Phase 1만 있고 Phase 2 (northStar, successMetrics) 누락
+      nonGoals: "",
+      openQuestions: [],
+      startDate: "",
+      endDate: "",
+      scheduleEntries: [],
+      risks: "",
+      etc: "",
+    };
+
+    const parsed = ProjectPlanDataSchema.parse(payload);
+    expect(parsed.northStar).toBe("");
+    expect(parsed.successMetrics).toEqual([]);
+  });
+
+  it("preserves provided northStar and successMetrics", () => {
+    const payload = {
+      title: "",
+      authorName: "",
+      teamName: "",
+      createdDate: "2026-05-07",
+      background: "",
+      objective: "",
+      scope: "",
+      stakeholders: "",
+      deliverables: "",
+      nonGoals: "",
+      openQuestions: [],
+      northStar: "보고서 작성 시간 75% 단축",
+      successMetrics: [
+        {
+          id: "m1",
+          name: "주간 활성 사용자",
+          target: "300명",
+          method: "GA",
+          timeline: "출시 후 4주",
+        },
+      ],
+      startDate: "",
+      endDate: "",
+      scheduleEntries: [],
+      risks: "",
+      etc: "",
+    };
+
+    const parsed = ProjectPlanDataSchema.parse(payload);
+    expect(parsed.northStar).toBe("보고서 작성 시간 75% 단축");
+    expect(parsed.successMetrics).toHaveLength(1);
+    expect(parsed.successMetrics[0].target).toBe("300명");
+  });
+});

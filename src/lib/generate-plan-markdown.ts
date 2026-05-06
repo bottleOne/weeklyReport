@@ -13,6 +13,31 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
   );
   lines.push("");
 
+  // North Star + 성공 지표 — 본문 번호 외 헤더 영역
+  if (data.northStar.trim()) {
+    lines.push("## 🌟 North Star");
+    lines.push("");
+    lines.push(`> ${data.northStar.trim()}`);
+    lines.push("");
+  }
+
+  lines.push("## 성공 지표");
+  lines.push("");
+  if (data.successMetrics.length === 0) {
+    lines.push("(등록된 지표 없음)");
+    lines.push("");
+  } else {
+    lines.push("| 지표 | 목표값 | 측정방법 | 시점 |");
+    lines.push("|---|---|---|---|");
+    for (const m of data.successMetrics) {
+      const safe = (s: string) => s.replace(/\|/g, "\\|").trim() || "-";
+      lines.push(
+        `| ${safe(m.name)} | ${safe(m.target)} | ${safe(m.method)} | ${safe(m.timeline)} |`
+      );
+    }
+    lines.push("");
+  }
+
   pushSection(lines, "1. 배경 / 필요성", data.background);
   pushSection(lines, "2. 목표", data.objective);
   pushSection(lines, "3. 범위", data.scope);

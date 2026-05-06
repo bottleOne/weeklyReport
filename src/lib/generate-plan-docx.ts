@@ -12,7 +12,12 @@ import {
   HeadingLevel,
   VerticalAlign,
 } from "docx";
-import type { ProjectPlanData, PlanScheduleEntry, OpenQuestionItem } from "./plan-types";
+import type {
+  ProjectPlanData,
+  PlanScheduleEntry,
+  OpenQuestionItem,
+  SuccessMetric,
+} from "./plan-types";
 import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "./plan-types";
 import { formatDateRange } from "./types";
 
@@ -95,6 +100,50 @@ function cell(
   });
 }
 
+function buildMetricsTable(metrics: SuccessMetric[]): Table {
+  const COL_NAME = 2400;
+  const COL_TARGET = 2000;
+  const COL_METHOD = 2800;
+  const COL_TIMELINE = 1800;
+
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      cell("지표", COL_NAME, { bold: true, align: AlignmentType.CENTER }),
+      cell("목표값", COL_TARGET, { bold: true, align: AlignmentType.CENTER }),
+      cell("측정방법", COL_METHOD, { bold: true, align: AlignmentType.CENTER }),
+      cell("시점", COL_TIMELINE, { bold: true, align: AlignmentType.CENTER }),
+    ],
+  });
+
+  const dataRows: TableRow[] = metrics.length
+    ? metrics.map(
+        (m) =>
+          new TableRow({
+            children: [
+              cell(m.name || "-", COL_NAME, { bold: true }),
+              cell(m.target || "-", COL_TARGET, { align: AlignmentType.CENTER }),
+              cell(m.method || "-", COL_METHOD),
+              cell(m.timeline || "-", COL_TIMELINE, { align: AlignmentType.CENTER }),
+            ],
+          })
+      )
+    : [
+        new TableRow({
+          children: [
+            cell("(등록된 지표 없음)", COL_NAME + COL_TARGET + COL_METHOD + COL_TIMELINE, {
+              align: AlignmentType.CENTER,
+            }),
+          ],
+        }),
+      ];
+
+  return new Table({
+    width: { size: COL_NAME + COL_TARGET + COL_METHOD + COL_TIMELINE, type: WidthType.DXA },
+    rows: [headerRow, ...dataRows],
+  });
+}
+
 function buildScheduleTable(entries: PlanScheduleEntry[]): Table {
   const COL_NUM = 600;
   const COL_RANGE = 2000;
@@ -172,6 +221,22 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
       ],
     })
   );
+
+  // North Star + 성공 지표 — 본문 번호 외 헤더 영역
+  if (data.northStar.trim()) {
+    children.push(heading("🌟 North Star"));
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        children: [makeText(data.northStar, { bold: true, size: 24 })],
+      })
+    );
+  }
+
+  children.push(heading("성공 지표"));
+  children.push(buildMetricsTable(data.successMetrics));
+  children.push(paragraph(""));
 
   children.push(heading("1. 배경 / 필요성"));
   children.push(...multilineParagraphs(data.background));

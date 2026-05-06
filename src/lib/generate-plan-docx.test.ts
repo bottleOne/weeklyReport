@@ -15,6 +15,16 @@ const sample: ProjectPlanData = {
   deliverables: "설계서, API, UI",
   nonGoals: "외부 SSO 통합",
   openQuestions: [{ id: "q1", question: "외부 SSO 적용 시기는?", resolved: false, resolution: "" }],
+  northStar: "권한 변경 평균 처리 시간 1일 → 1시간",
+  successMetrics: [
+    {
+      id: "m1",
+      name: "권한 변경 처리 시간",
+      target: "1시간 이내",
+      method: "감사로그 집계",
+      timeline: "출시 후 4주",
+    },
+  ],
   startDate: "2026-05-01",
   endDate: "2026-07-31",
   scheduleEntries: [
@@ -63,6 +73,16 @@ describe("generatePlanDocxBuffer", () => {
     const buffer = await generatePlanDocxBuffer(sample);
     const xml = await extractDocumentXml(buffer);
     expect(xml).toContain("☐ 외부 SSO 적용 시기는?");
+  });
+
+  it("renders Phase 2 North Star + 성공 지표 table", async () => {
+    const buffer = await generatePlanDocxBuffer(sample);
+    const xml = await extractDocumentXml(buffer);
+    expect(xml).toContain("🌟 North Star");
+    expect(xml).toContain("권한 변경 평균 처리 시간 1일 → 1시간");
+    expect(xml).toContain("성공 지표");
+    expect(xml).toContain("권한 변경 처리 시간");
+    expect(xml).toContain("출시 후 4주");
   });
 
   it("includes schedule table with entry and status label", async () => {

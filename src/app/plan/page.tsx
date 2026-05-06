@@ -2,10 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import type { ProjectPlanData, PlanScheduleEntry, OpenQuestionItem } from "@/lib/plan-types";
+import type {
+  ProjectPlanData,
+  PlanScheduleEntry,
+  OpenQuestionItem,
+  SuccessMetric,
+} from "@/lib/plan-types";
 import {
   createEmptyPlan,
   createEmptyOpenQuestion,
+  createEmptySuccessMetric,
   createScheduleEntryFromRange,
   generatePlanFileName,
 } from "@/lib/plan-types";
@@ -16,6 +22,8 @@ import PlanInfoSection from "@/components/plan/PlanInfoSection";
 import PlanTextSection from "@/components/plan/PlanTextSection";
 import PlanNonGoalsSection from "@/components/plan/PlanNonGoalsSection";
 import PlanOpenQuestionsSection from "@/components/plan/PlanOpenQuestionsSection";
+import PlanNorthStarCard from "@/components/plan/PlanNorthStarCard";
+import PlanMetricsSection from "@/components/plan/PlanMetricsSection";
 import PlanScheduleCalendar from "@/components/plan/PlanScheduleCalendar";
 import PlanScheduleEntryCard from "@/components/plan/PlanScheduleEntryCard";
 import PlanPreview from "@/components/plan/PlanPreview";
@@ -72,6 +80,8 @@ export default function PlanPage() {
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   // 새로 추가된 미결사항 id — 마운트 시 question input 자동 focus용. focused 후 null로 풀림.
   const [focusOpenQuestionId, setFocusOpenQuestionId] = useState<string | null>(null);
+  // 새로 추가된 성공 지표 id — 마운트 시 name input 자동 focus.
+  const [focusMetricId, setFocusMetricId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
 
@@ -163,6 +173,27 @@ export default function PlanPage() {
     setPlan((prev) => ({
       ...prev,
       openQuestions: prev.openQuestions.filter((q) => q.id !== id),
+    }));
+  }, []);
+
+  // ===== 성공 지표 (Success Metrics) =====
+  const addMetric = useCallback(() => {
+    const item = createEmptySuccessMetric();
+    setPlan((prev) => ({ ...prev, successMetrics: [...prev.successMetrics, item] }));
+    setFocusMetricId(item.id);
+  }, []);
+
+  const updateMetric = useCallback((id: string, patch: Partial<SuccessMetric>) => {
+    setPlan((prev) => ({
+      ...prev,
+      successMetrics: prev.successMetrics.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    }));
+  }, []);
+
+  const removeMetric = useCallback((id: string) => {
+    setPlan((prev) => ({
+      ...prev,
+      successMetrics: prev.successMetrics.filter((m) => m.id !== id),
     }));
   }, []);
 
@@ -386,6 +417,18 @@ export default function PlanPage() {
                     value as ProjectPlanData[keyof ProjectPlanData]
                   )
                 }
+              />
+              <PlanNorthStarCard
+                value={plan.northStar}
+                onChange={(value) => updateField("northStar", value)}
+              />
+              <PlanMetricsSection
+                items={plan.successMetrics}
+                onAdd={addMetric}
+                onChange={updateMetric}
+                onRemove={removeMetric}
+                focusId={focusMetricId}
+                onFocused={() => setFocusMetricId(null)}
               />
               <PlanTextSection
                 fields={TEXT_FIELDS.map((f) => ({

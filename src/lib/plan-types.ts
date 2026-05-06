@@ -34,6 +34,18 @@ export interface OpenQuestionItem {
   resolution: string;
 }
 
+/**
+ * 성공 지표 — 측정 가능한 목표 + 측정방법 + 시점.
+ * northStar(상위 한 줄 비전)와 함께 평가 기준 역할.
+ */
+export interface SuccessMetric {
+  id: string;
+  name: string;
+  target: string;
+  method: string;
+  timeline: string;
+}
+
 export interface ProjectPlanData {
   // 기본 정보
   title: string;
@@ -51,6 +63,10 @@ export interface ProjectPlanData {
   // 범위 외 + 미결사항 (Phase 1)
   nonGoals: string;
   openQuestions: OpenQuestionItem[];
+
+  // 성공 지표 (Phase 2)
+  northStar: string;
+  successMetrics: SuccessMetric[];
 
   // 일정 (캘린더 + 항목 리스트)
   startDate: string;
@@ -99,6 +115,8 @@ export function createEmptyPlan(): ProjectPlanData {
     deliverables: "",
     nonGoals: "",
     openQuestions: [],
+    northStar: "",
+    successMetrics: [],
     startDate: "",
     endDate: "",
     scheduleEntries: [],
@@ -113,6 +131,16 @@ export function createEmptyOpenQuestion(): OpenQuestionItem {
     question: "",
     resolved: false,
     resolution: "",
+  };
+}
+
+export function createEmptySuccessMetric(): SuccessMetric {
+  return {
+    id: newId(),
+    name: "",
+    target: "",
+    method: "",
+    timeline: "",
   };
 }
 

@@ -24,8 +24,17 @@ export const OpenQuestionItemSchema = z.object({
   resolution: z.string(),
 });
 
-// 새 필드(nonGoals, openQuestions)는 Phase 1 도입.
-// v2 localStorage 호환을 위해 default 값을 부여 → 기존 사용자는 빈 값으로 부드럽게 마이그레이션.
+export const SuccessMetricSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  target: z.string(),
+  method: z.string(),
+  timeline: z.string(),
+});
+
+// Phase 1: nonGoals + openQuestions 도입.
+// Phase 2: northStar + successMetrics 도입.
+// v2 localStorage 호환을 위해 신규 필드는 default 값 부여 → 기존 사용자는 빈 값으로 부드럽게 마이그레이션.
 export const ProjectPlanDataSchema = z.object({
   title: z.string(),
   authorName: z.string(),
@@ -38,6 +47,8 @@ export const ProjectPlanDataSchema = z.object({
   deliverables: z.string(),
   nonGoals: z.string().default(""),
   openQuestions: z.array(OpenQuestionItemSchema).default([]),
+  northStar: z.string().default(""),
+  successMetrics: z.array(SuccessMetricSchema).default([]),
   startDate: z.string(),
   endDate: z.string(),
   scheduleEntries: z.array(PlanScheduleEntrySchema),

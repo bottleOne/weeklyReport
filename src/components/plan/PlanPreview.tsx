@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectPlanData, OpenQuestionItem } from "@/lib/plan-types";
+import type { ProjectPlanData, OpenQuestionItem, SuccessMetric } from "@/lib/plan-types";
 import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "@/lib/plan-types";
 import { formatDateRange } from "@/lib/types";
 
@@ -28,10 +28,23 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
       className="mx-auto w-full max-w-[900px] rounded-xl border border-gray-200 bg-white p-10 text-sm text-gray-800"
     >
       <h1 className="mb-2 text-center text-2xl font-extrabold">{data.title || "(제목 미입력)"}</h1>
-      <p className="mb-8 text-center text-xs text-gray-500">
+      <p className="mb-6 text-center text-xs text-gray-500">
         프로젝트 기획서 · {data.teamName || "팀"} · 작성자 {data.authorName || "이름"} · 작성일{" "}
         {data.createdDate}
       </p>
+
+      {data.northStar.trim() && (
+        <div className="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-center">
+          <div className="mb-1 text-xs font-semibold tracking-wide text-indigo-600">
+            🌟 NORTH STAR
+          </div>
+          <p className="text-base font-semibold text-gray-900">{data.northStar}</p>
+        </div>
+      )}
+
+      <Section title="성공 지표">
+        <MetricsBlock items={data.successMetrics} />
+      </Section>
 
       <Section title="1. 배경 / 필요성">{paragraph(data.background)}</Section>
       <Section title="2. 목표">{paragraph(data.objective)}</Section>
@@ -88,6 +101,32 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-2 border-b border-gray-200 pb-1 text-base font-bold">{title}</h2>
       <div className="pl-2">{children}</div>
     </div>
+  );
+}
+
+function MetricsBlock({ items }: { items: SuccessMetric[] }) {
+  if (items.length === 0) return <span className="text-gray-400">(등록된 지표 없음)</span>;
+  return (
+    <table className="w-full table-fixed border-collapse text-xs">
+      <thead>
+        <tr className="border-b-2 border-gray-300 text-left">
+          <th className="w-1/4 py-2 pr-2 text-gray-500">지표</th>
+          <th className="w-1/6 py-2 pr-2 text-gray-500">목표값</th>
+          <th className="py-2 pr-2 text-gray-500">측정방법</th>
+          <th className="w-1/6 py-2 text-gray-500">시점</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((m) => (
+          <tr key={m.id} className="border-b border-gray-100 align-top">
+            <td className="py-2 pr-2 font-semibold">{m.name || "-"}</td>
+            <td className="py-2 pr-2">{m.target || "-"}</td>
+            <td className="py-2 pr-2 leading-relaxed">{m.method || "-"}</td>
+            <td className="py-2">{m.timeline || "-"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

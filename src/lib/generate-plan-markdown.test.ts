@@ -17,6 +17,16 @@ const sample: ProjectPlanData = {
     { id: "q1", question: "외부 SSO 적용 시기는?", resolved: false, resolution: "" },
     { id: "q2", question: "권한 모델 명칭 표준?", resolved: true, resolution: "RBAC v2 채택" },
   ],
+  northStar: "권한 변경 평균 처리 시간 1일 → 1시간",
+  successMetrics: [
+    {
+      id: "m1",
+      name: "권한 변경 처리 시간",
+      target: "1시간 이내",
+      method: "감사로그 집계",
+      timeline: "출시 후 4주",
+    },
+  ],
   startDate: "2026-05-01",
   endDate: "2026-07-31",
   scheduleEntries: [
@@ -50,6 +60,16 @@ describe("generatePlanMarkdown", () => {
     expect(md).toContain("개발2팀");
     expect(md).toContain("전병일");
     expect(md).toContain("2026-04-25");
+  });
+
+  it("renders Phase 2 header sections (North Star + 성공 지표)", () => {
+    const md = generatePlanMarkdown(sample);
+    expect(md).toContain("## 🌟 North Star");
+    expect(md).toContain("권한 변경 평균 처리 시간 1일 → 1시간");
+    expect(md).toContain("## 성공 지표");
+    expect(md).toContain("| 지표 | 목표값 | 측정방법 | 시점 |");
+    expect(md).toContain("권한 변경 처리 시간");
+    expect(md).toContain("출시 후 4주");
   });
 
   it("renders all 10 sections in renumbered order", () => {

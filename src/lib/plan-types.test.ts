@@ -3,6 +3,7 @@ import {
   createEmptyOpenQuestion,
   createEmptyPlan,
   createEmptyScheduleEntry,
+  createEmptySuccessMetric,
   createScheduleEntryFromRange,
   generatePlanFileName,
   sortOpenQuestions,
@@ -38,12 +39,27 @@ describe("createEmpty* factories", () => {
     expect(p.openQuestions).toEqual([]);
   });
 
+  it("createEmptyPlan includes Phase 2 fields with empty defaults", () => {
+    const p = createEmptyPlan();
+    expect(p.northStar).toBe("");
+    expect(p.successMetrics).toEqual([]);
+  });
+
   it("createEmptyOpenQuestion defaults to unresolved with blank fields", () => {
     const q = createEmptyOpenQuestion();
     expect(q.id).toBeTruthy();
     expect(q.question).toBe("");
     expect(q.resolved).toBe(false);
     expect(q.resolution).toBe("");
+  });
+
+  it("createEmptySuccessMetric defaults to blank fields with id", () => {
+    const m = createEmptySuccessMetric();
+    expect(m.id).toBeTruthy();
+    expect(m.name).toBe("");
+    expect(m.target).toBe("");
+    expect(m.method).toBe("");
+    expect(m.timeline).toBe("");
   });
 });
 
@@ -84,6 +100,8 @@ describe("generatePlanFileName", () => {
     deliverables: "",
     nonGoals: "",
     openQuestions: [],
+    northStar: "",
+    successMetrics: [],
     startDate: "",
     endDate: "",
     scheduleEntries: [],
