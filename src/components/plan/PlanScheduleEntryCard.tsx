@@ -8,7 +8,8 @@ import { formatDateRange } from "@/lib/types";
 interface PlanScheduleEntryCardProps {
   entry: PlanScheduleEntry;
   index: number;
-  onChange: (id: string, field: keyof PlanScheduleEntry, value: string) => void;
+  /** patch 객체로 변경 — value 타입이 필드별로 정확히 narrow됨 (예: status는 TaskStatus). */
+  onChange: (id: string, patch: Partial<PlanScheduleEntry>) => void;
   onRemove: (id: string) => void;
   onHover: (id: string | null) => void;
   /** 담당자 input 자동완성 옵션 — Phase 4에서 stakeholders 이름 목록을 전달. */
@@ -63,7 +64,7 @@ export default function PlanScheduleEntryCard({
           type="text"
           placeholder="일정 제목 (예: 요구사항 정의 마감)"
           value={entry.title}
-          onChange={(e) => onChange(entry.id, "title", e.target.value)}
+          onChange={(e) => onChange(entry.id, { title: e.target.value })}
           className="flex-1 border-b-2 border-gray-300 bg-transparent pb-1 text-base font-semibold transition-colors outline-none focus:border-indigo-500"
         />
         <button
@@ -83,14 +84,14 @@ export default function PlanScheduleEntryCard({
             <input
               type="date"
               value={entry.dateFrom}
-              onChange={(e) => onChange(entry.id, "dateFrom", e.target.value)}
+              onChange={(e) => onChange(entry.id, { dateFrom: e.target.value })}
               className="min-w-0 flex-1 rounded-md border border-gray-200 p-2 text-sm outline-none focus:border-indigo-500"
             />
             <span className="text-xs text-gray-400">~</span>
             <input
               type="date"
               value={entry.dateTo}
-              onChange={(e) => onChange(entry.id, "dateTo", e.target.value)}
+              onChange={(e) => onChange(entry.id, { dateTo: e.target.value })}
               className="min-w-0 flex-1 rounded-md border border-gray-200 p-2 text-sm outline-none focus:border-indigo-500"
             />
           </div>
@@ -109,7 +110,7 @@ export default function PlanScheduleEntryCard({
             type="text"
             placeholder="예: 전병일"
             value={entry.assignee}
-            onChange={(e) => onChange(entry.id, "assignee", e.target.value)}
+            onChange={(e) => onChange(entry.id, { assignee: e.target.value })}
             list={assigneeOptions && assigneeOptions.length > 0 ? datalistId : undefined}
             className="w-full rounded-md border border-gray-200 p-2 text-sm outline-none focus:border-indigo-500"
           />
@@ -125,7 +126,7 @@ export default function PlanScheduleEntryCard({
           <label className="mb-1 block text-xs font-semibold text-gray-700">상태</label>
           <select
             value={entry.status}
-            onChange={(e) => onChange(entry.id, "status", e.target.value)}
+            onChange={(e) => onChange(entry.id, { status: e.target.value as TaskStatus })}
             className={`w-full rounded-md border p-2 text-sm font-medium outline-none ${STATUS_COLOR[entry.status]}`}
           >
             {(Object.keys(TASK_STATUS_LABEL) as TaskStatus[]).map((s) => (
@@ -142,7 +143,7 @@ export default function PlanScheduleEntryCard({
         <textarea
           placeholder="이 기간의 활동/회의/마감 등 상세 내용"
           value={entry.details}
-          onChange={(e) => onChange(entry.id, "details", e.target.value)}
+          onChange={(e) => onChange(entry.id, { details: e.target.value })}
           className="min-h-[60px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
         />
       </div>

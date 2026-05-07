@@ -26,7 +26,7 @@ import { ProjectPlanDataSchema } from "@/lib/plan-schemas";
 import { loadPersisted, clearPersisted, usePersistedState } from "@/hooks/usePersistedState";
 import { generatePlanMarkdown } from "@/lib/generate-plan-markdown";
 import PlanInfoSection from "@/components/plan/PlanInfoSection";
-import PlanTextSection from "@/components/plan/PlanTextSection";
+import PlanTextSection, { type PlanBodyField } from "@/components/plan/PlanTextSection";
 import PlanNonGoalsSection from "@/components/plan/PlanNonGoalsSection";
 import PlanOpenQuestionsSection from "@/components/plan/PlanOpenQuestionsSection";
 import PlanNorthStarCard from "@/components/plan/PlanNorthStarCard";
@@ -46,7 +46,7 @@ type PlanTab = "plan" | "schedule";
 
 // Phase 4 이후: 이해관계자는 헤더 영역(별도 카드)으로 빠짐. 본문은 4섹션.
 // placeholder는 빈 폼 진입 시 작성 마찰을 줄이기 위해 구체 예시로 — Phase 6.
-const TEXT_FIELDS: { key: keyof ProjectPlanData; label: string; placeholder: string }[] = [
+const TEXT_FIELDS: { key: PlanBodyField; label: string; placeholder: string }[] = [
   {
     key: "background",
     label: "1. 배경 / 필요성",
@@ -191,12 +191,10 @@ export default function PlanPage() {
     setSelectedEntryId(null);
   }, []);
 
-  const updateEntry = useCallback((id: string, field: keyof PlanScheduleEntry, value: string) => {
+  const updateEntry = useCallback((id: string, patch: Partial<PlanScheduleEntry>) => {
     setPlan((prev) => ({
       ...prev,
-      scheduleEntries: prev.scheduleEntries.map((e) =>
-        e.id === id ? { ...e, [field]: value } : e
-      ),
+      scheduleEntries: prev.scheduleEntries.map((e) => (e.id === id ? { ...e, ...patch } : e)),
     }));
   }, []);
 
@@ -547,12 +545,7 @@ export default function PlanPage() {
                     createdDate={plan.createdDate}
                     startDate={plan.startDate}
                     endDate={plan.endDate}
-                    onChange={(field, value) =>
-                      updateField(
-                        field as keyof ProjectPlanData,
-                        value as ProjectPlanData[keyof ProjectPlanData]
-                      )
-                    }
+                    onChange={(field, value) => updateField(field, value)}
                   />
                 </section>
                 <section id="toc-stakeholders" className="scroll-mt-4">
@@ -587,14 +580,9 @@ export default function PlanPage() {
                       key: f.key,
                       label: f.label,
                       placeholder: f.placeholder,
-                      value: plan[f.key] as string,
+                      value: plan[f.key],
                     }))}
-                    onChange={(key, value) =>
-                      updateField(
-                        key as keyof ProjectPlanData,
-                        value as ProjectPlanData[keyof ProjectPlanData]
-                      )
-                    }
+                    onChange={(key, value) => updateField(key, value)}
                   />
                 </section>
                 <section id="toc-nongoals" className="scroll-mt-4">

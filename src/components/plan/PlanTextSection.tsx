@@ -1,7 +1,10 @@
 "use client";
 
+/** 본문 textarea로 다룰 수 있는 필드 키 — 좁은 union으로 호출자에게 강제. */
+export type PlanBodyField = "background" | "objective" | "scope" | "deliverables";
+
 interface TextField {
-  key: string;
+  key: PlanBodyField;
   label: string;
   placeholder: string;
   value: string;
@@ -9,7 +12,7 @@ interface TextField {
 
 interface PlanTextSectionProps {
   fields: TextField[];
-  onChange: (key: string, value: string) => void;
+  onChange: (key: PlanBodyField, value: string) => void;
 }
 
 /**

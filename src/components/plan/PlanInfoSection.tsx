@@ -1,5 +1,14 @@
 "use client";
 
+/** 기본 정보 입력에서 변경 가능한 필드 키 — 컴파일 타임에 오타/잘못된 필드 차단. */
+export type PlanInfoField =
+  | "title"
+  | "teamName"
+  | "authorName"
+  | "createdDate"
+  | "startDate"
+  | "endDate";
+
 interface PlanInfoSectionProps {
   title: string;
   teamName: string;
@@ -7,7 +16,7 @@ interface PlanInfoSectionProps {
   createdDate: string;
   startDate: string;
   endDate: string;
-  onChange: (field: string, value: string) => void;
+  onChange: (field: PlanInfoField, value: string) => void;
 }
 
 export default function PlanInfoSection({
