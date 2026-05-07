@@ -124,14 +124,18 @@ export default function PlanPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
   // 사이드바 모드 결정: selectedEntryId 있으면 단일 일정 모드, 없고 selectedDate 있으면 그 날짜 전체 모드
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
-  // 새로 추가된 미결사항 id — 마운트 시 question input 자동 focus용. focused 후 null로 풀림.
-  const [focusOpenQuestionId, setFocusOpenQuestionId] = useState<string | null>(null);
-  // 새로 추가된 성공 지표 id — 마운트 시 name input 자동 focus.
-  const [focusMetricId, setFocusMetricId] = useState<string | null>(null);
-  // 새로 추가된 risk id — 마운트 시 description textarea 자동 focus.
-  const [focusRiskId, setFocusRiskId] = useState<string | null>(null);
-  // 새로 추가된 stakeholder id — 마운트 시 name input 자동 focus.
-  const [focusStakeholderId, setFocusStakeholderId] = useState<string | null>(null);
+  // 섹션별 새 항목 추가 직후 자동 focus 대상 — 추적 후 focused되면 null로 풀림.
+  // 섹션별 4개 useState를 단일 객체로 통합 (다음 섹션 추가 시 5개 임계치 초과 방지).
+  type FocusKey = "openQuestion" | "metric" | "risk" | "stakeholder";
+  const [focusByKey, setFocusByKey] = useState<Partial<Record<FocusKey, string>>>({});
+  const setFocus = useCallback((key: FocusKey, id: string | null) => {
+    setFocusByKey((prev) => {
+      const next = { ...prev };
+      if (id) next[key] = id;
+      else delete next[key];
+      return next;
+    });
+  }, []);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
 
@@ -209,8 +213,8 @@ export default function PlanPage() {
   const addOpenQuestion = useCallback(() => {
     const item = createEmptyOpenQuestion();
     setPlan((prev) => ({ ...prev, openQuestions: [...prev.openQuestions, item] }));
-    setFocusOpenQuestionId(item.id);
-  }, []);
+    setFocus("openQuestion", item.id);
+  }, [setFocus]);
 
   const updateOpenQuestion = useCallback((id: string, patch: Partial<OpenQuestionItem>) => {
     setPlan((prev) => ({
@@ -230,8 +234,8 @@ export default function PlanPage() {
   const addMetric = useCallback(() => {
     const item = createEmptySuccessMetric();
     setPlan((prev) => ({ ...prev, successMetrics: [...prev.successMetrics, item] }));
-    setFocusMetricId(item.id);
-  }, []);
+    setFocus("metric", item.id);
+  }, [setFocus]);
 
   const updateMetric = useCallback((id: string, patch: Partial<SuccessMetric>) => {
     setPlan((prev) => ({
@@ -251,8 +255,8 @@ export default function PlanPage() {
   const addRisk = useCallback(() => {
     const item = createEmptyRisk();
     setPlan((prev) => ({ ...prev, risks: [...prev.risks, item] }));
-    setFocusRiskId(item.id);
-  }, []);
+    setFocus("risk", item.id);
+  }, [setFocus]);
 
   const updateRisk = useCallback((id: string, patch: Partial<RiskItem>) => {
     setPlan((prev) => ({
@@ -272,8 +276,8 @@ export default function PlanPage() {
   const addStakeholder = useCallback(() => {
     const item = createEmptyStakeholder();
     setPlan((prev) => ({ ...prev, stakeholders: [...prev.stakeholders, item] }));
-    setFocusStakeholderId(item.id);
-  }, []);
+    setFocus("stakeholder", item.id);
+  }, [setFocus]);
 
   const updateStakeholder = useCallback((id: string, patch: Partial<Stakeholder>) => {
     setPlan((prev) => ({
@@ -557,8 +561,8 @@ export default function PlanPage() {
                     onAdd={addStakeholder}
                     onChange={updateStakeholder}
                     onRemove={removeStakeholder}
-                    focusId={focusStakeholderId}
-                    onFocused={() => setFocusStakeholderId(null)}
+                    focusId={focusByKey.stakeholder ?? null}
+                    onFocused={() => setFocus("stakeholder", null)}
                   />
                 </section>
                 <section id="toc-northstar" className="scroll-mt-4">
@@ -573,8 +577,8 @@ export default function PlanPage() {
                     onAdd={addMetric}
                     onChange={updateMetric}
                     onRemove={removeMetric}
-                    focusId={focusMetricId}
-                    onFocused={() => setFocusMetricId(null)}
+                    focusId={focusByKey.metric ?? null}
+                    onFocused={() => setFocus("metric", null)}
                   />
                 </section>
                 <section id="toc-body" className="scroll-mt-4">
@@ -605,8 +609,8 @@ export default function PlanPage() {
                     onAdd={addOpenQuestion}
                     onChange={updateOpenQuestion}
                     onRemove={removeOpenQuestion}
-                    focusId={focusOpenQuestionId}
-                    onFocused={() => setFocusOpenQuestionId(null)}
+                    focusId={focusByKey.openQuestion ?? null}
+                    onFocused={() => setFocus("openQuestion", null)}
                   />
                 </section>
                 <section id="toc-risks" className="scroll-mt-4">
@@ -615,8 +619,8 @@ export default function PlanPage() {
                     onAdd={addRisk}
                     onChange={updateRisk}
                     onRemove={removeRisk}
-                    focusId={focusRiskId}
-                    onFocused={() => setFocusRiskId(null)}
+                    focusId={focusByKey.risk ?? null}
+                    onFocused={() => setFocus("risk", null)}
                   />
                 </section>
                 <section id="toc-etc" className="scroll-mt-4">
