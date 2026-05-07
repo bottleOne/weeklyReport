@@ -18,7 +18,8 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
       startDate: "",
       endDate: "",
       scheduleEntries: [],
-      risks: "기존 risks 텍스트",
+      // Phase 3 이전: risks는 string
+      risks: "외부 API 지연\n인력 부족",
       etc: "",
     };
 
@@ -26,7 +27,11 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
     expect(parsed.nonGoals).toBe("");
     expect(parsed.openQuestions).toEqual([]);
     expect(parsed.title).toBe("기존 기획서");
-    expect(parsed.risks).toBe("기존 risks 텍스트");
+    // Phase 3 마이그레이션: risks string → RiskItem[]로 자동 변환
+    expect(Array.isArray(parsed.risks)).toBe(true);
+    expect(parsed.risks).toHaveLength(2);
+    expect(parsed.risks[0].description).toBe("외부 API 지연");
+    expect(parsed.risks[0].impact).toBe("medium");
   });
 
   it("preserves provided nonGoals and openQuestions when present", () => {
@@ -48,7 +53,7 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
       startDate: "",
       endDate: "",
       scheduleEntries: [],
-      risks: "",
+      risks: "", // 빈 string도 허용 → []
       etc: "",
     };
 
@@ -61,6 +66,53 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
       resolved: true,
       resolution: "Postgres",
     });
+    expect(parsed.risks).toEqual([]);
+  });
+});
+
+describe("ProjectPlanDataSchema — Phase 3 risks migration & v3 raw", () => {
+  const baseV3 = {
+    title: "",
+    authorName: "",
+    teamName: "",
+    createdDate: "2026-05-07",
+    background: "",
+    objective: "",
+    scope: "",
+    stakeholders: "",
+    deliverables: "",
+    nonGoals: "",
+    openQuestions: [],
+    northStar: "",
+    successMetrics: [],
+    startDate: "",
+    endDate: "",
+    scheduleEntries: [],
+    etc: "",
+  };
+
+  it("accepts v3 raw risks array as-is", () => {
+    const payload = {
+      ...baseV3,
+      risks: [
+        {
+          id: "r1",
+          description: "외부 API 지연",
+          impact: "high",
+          likelihood: "medium",
+          mitigation: "캐시 fallback",
+        },
+      ],
+    };
+    const parsed = ProjectPlanDataSchema.parse(payload);
+    expect(parsed.risks).toHaveLength(1);
+    expect(parsed.risks[0].impact).toBe("high");
+    expect(parsed.risks[0].mitigation).toBe("캐시 fallback");
+  });
+
+  it("treats missing risks field as empty array (default)", () => {
+    const parsed = ProjectPlanDataSchema.parse(baseV3);
+    expect(parsed.risks).toEqual([]);
   });
 });
 

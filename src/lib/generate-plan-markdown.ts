@@ -1,5 +1,12 @@
 import type { ProjectPlanData } from "./plan-types";
-import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "./plan-types";
+import {
+  TASK_STATUS_LABEL,
+  RISK_LEVEL_LABEL,
+  computeRiskScore,
+  sortOpenQuestions,
+  sortRisksByScore,
+  sortScheduleEntriesByStart,
+} from "./plan-types";
 import { formatDateRange } from "./types";
 
 /** ProjectPlanData를 Markdown 문자열로 직렬화. 클라이언트에서 직접 호출. */
@@ -69,7 +76,7 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
     lines.push("");
   }
 
-  pushSection(lines, "9. 리스크", data.risks);
+  pushRisks(lines, data);
   pushSection(lines, "10. 기타", data.etc);
 
   return lines.join("\n");
@@ -79,6 +86,25 @@ function pushSection(lines: string[], heading: string, body: string): void {
   lines.push(`## ${heading}`);
   lines.push("");
   lines.push(body.trim() ? body : "(미입력)");
+  lines.push("");
+}
+
+function pushRisks(lines: string[], data: ProjectPlanData): void {
+  lines.push("## 9. 리스크");
+  lines.push("");
+  if (data.risks.length === 0) {
+    lines.push("(미입력)");
+    lines.push("");
+    return;
+  }
+  lines.push("| # | 리스크 | 영향도 | 확률 | 점수 | 대응 방안 |");
+  lines.push("|---|---|---|---|---|---|");
+  const safe = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, "<br/>").trim() || "-";
+  sortRisksByScore(data.risks).forEach((r, idx) => {
+    lines.push(
+      `| ${idx + 1} | ${safe(r.description)} | ${RISK_LEVEL_LABEL[r.impact]} | ${RISK_LEVEL_LABEL[r.likelihood]} | ${computeRiskScore(r)} | ${safe(r.mitigation)} |`
+    );
+  });
   lines.push("");
 }
 

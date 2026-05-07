@@ -7,11 +7,13 @@ import type {
   PlanScheduleEntry,
   OpenQuestionItem,
   SuccessMetric,
+  RiskItem,
 } from "@/lib/plan-types";
 import {
   createEmptyPlan,
   createEmptyOpenQuestion,
   createEmptySuccessMetric,
+  createEmptyRisk,
   createScheduleEntryFromRange,
   generatePlanFileName,
 } from "@/lib/plan-types";
@@ -24,6 +26,7 @@ import PlanNonGoalsSection from "@/components/plan/PlanNonGoalsSection";
 import PlanOpenQuestionsSection from "@/components/plan/PlanOpenQuestionsSection";
 import PlanNorthStarCard from "@/components/plan/PlanNorthStarCard";
 import PlanMetricsSection from "@/components/plan/PlanMetricsSection";
+import PlanRisksSection from "@/components/plan/PlanRisksSection";
 import PlanScheduleCalendar from "@/components/plan/PlanScheduleCalendar";
 import PlanScheduleEntryCard from "@/components/plan/PlanScheduleEntryCard";
 import PlanPreview from "@/components/plan/PlanPreview";
@@ -82,6 +85,8 @@ export default function PlanPage() {
   const [focusOpenQuestionId, setFocusOpenQuestionId] = useState<string | null>(null);
   // 새로 추가된 성공 지표 id — 마운트 시 name input 자동 focus.
   const [focusMetricId, setFocusMetricId] = useState<string | null>(null);
+  // 새로 추가된 risk id — 마운트 시 description textarea 자동 focus.
+  const [focusRiskId, setFocusRiskId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
 
@@ -194,6 +199,27 @@ export default function PlanPage() {
     setPlan((prev) => ({
       ...prev,
       successMetrics: prev.successMetrics.filter((m) => m.id !== id),
+    }));
+  }, []);
+
+  // ===== 리스크 (Risks) =====
+  const addRisk = useCallback(() => {
+    const item = createEmptyRisk();
+    setPlan((prev) => ({ ...prev, risks: [...prev.risks, item] }));
+    setFocusRiskId(item.id);
+  }, []);
+
+  const updateRisk = useCallback((id: string, patch: Partial<RiskItem>) => {
+    setPlan((prev) => ({
+      ...prev,
+      risks: prev.risks.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+    }));
+  }, []);
+
+  const removeRisk = useCallback((id: string) => {
+    setPlan((prev) => ({
+      ...prev,
+      risks: prev.risks.filter((r) => r.id !== id),
     }));
   }, []);
 
@@ -456,28 +482,24 @@ export default function PlanPage() {
                 focusId={focusOpenQuestionId}
                 onFocused={() => setFocusOpenQuestionId(null)}
               />
+              <PlanRisksSection
+                items={plan.risks}
+                onAdd={addRisk}
+                onChange={updateRisk}
+                onRemove={removeRisk}
+                focusId={focusRiskId}
+                onFocused={() => setFocusRiskId(null)}
+              />
               <div className="rounded-xl border border-gray-200 bg-white p-5">
-                <div className="mb-4 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
-                  ⚠️ 리스크 & 기타
+                <div className="mb-3 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
+                  📝 기타
                 </div>
-                <div className="mb-4">
-                  <label className="mb-1 block text-xs font-semibold text-gray-700">리스크</label>
-                  <textarea
-                    placeholder="예측 가능한 리스크와 대응 방안"
-                    value={plan.risks}
-                    onChange={(e) => updateField("risks", e.target.value)}
-                    className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-700">기타</label>
-                  <textarea
-                    placeholder="기타 사항"
-                    value={plan.etc}
-                    onChange={(e) => updateField("etc", e.target.value)}
-                    className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
-                  />
-                </div>
+                <textarea
+                  placeholder="기타 사항"
+                  value={plan.etc}
+                  onChange={(e) => updateField("etc", e.target.value)}
+                  className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
+                />
               </div>
             </div>
           )}

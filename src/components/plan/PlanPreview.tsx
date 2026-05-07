@@ -1,7 +1,14 @@
 "use client";
 
-import type { ProjectPlanData, OpenQuestionItem, SuccessMetric } from "@/lib/plan-types";
-import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "@/lib/plan-types";
+import type { ProjectPlanData, OpenQuestionItem, SuccessMetric, RiskItem } from "@/lib/plan-types";
+import {
+  TASK_STATUS_LABEL,
+  RISK_LEVEL_LABEL,
+  computeRiskScore,
+  sortOpenQuestions,
+  sortRisksByScore,
+  sortScheduleEntriesByStart,
+} from "@/lib/plan-types";
 import { formatDateRange } from "@/lib/types";
 
 interface PlanPreviewProps {
@@ -89,7 +96,9 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
         )}
       </Section>
 
-      <Section title="9. 리스크">{paragraph(data.risks)}</Section>
+      <Section title="9. 리스크">
+        <RisksBlock items={data.risks} />
+      </Section>
       <Section title="10. 기타">{paragraph(data.etc)}</Section>
     </div>
   );
@@ -101,6 +110,39 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-2 border-b border-gray-200 pb-1 text-base font-bold">{title}</h2>
       <div className="pl-2">{children}</div>
     </div>
+  );
+}
+
+function RisksBlock({ items }: { items: RiskItem[] }) {
+  if (items.length === 0) return <span className="text-gray-400">(미입력)</span>;
+  const sorted = sortRisksByScore(items);
+  return (
+    <table className="w-full table-fixed border-collapse text-xs">
+      <thead>
+        <tr className="border-b-2 border-gray-300 text-left">
+          <th className="w-8 py-2 pr-2 text-gray-500">#</th>
+          <th className="py-2 pr-2 text-gray-500">리스크</th>
+          <th className="w-14 py-2 pr-2 text-gray-500">영향도</th>
+          <th className="w-14 py-2 pr-2 text-gray-500">확률</th>
+          <th className="w-12 py-2 pr-2 text-center text-gray-500">점수</th>
+          <th className="w-1/3 py-2 text-gray-500">대응 방안</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((r, idx) => (
+          <tr key={r.id} className="border-b border-gray-100 align-top">
+            <td className="py-2 pr-2 font-medium">{idx + 1}</td>
+            <td className="py-2 pr-2 leading-relaxed whitespace-pre-wrap">
+              {r.description || "-"}
+            </td>
+            <td className="py-2 pr-2">{RISK_LEVEL_LABEL[r.impact]}</td>
+            <td className="py-2 pr-2">{RISK_LEVEL_LABEL[r.likelihood]}</td>
+            <td className="py-2 pr-2 text-center font-bold">{computeRiskScore(r)}</td>
+            <td className="py-2 leading-relaxed whitespace-pre-wrap">{r.mitigation || "-"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

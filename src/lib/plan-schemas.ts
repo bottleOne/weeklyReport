@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { legacyRisksTextToItems } from "./plan-types";
 
 /**
  * 프로젝트 기획서 도메인 zod 스키마.
@@ -6,6 +7,7 @@ import { z } from "zod";
  */
 
 export const TaskStatusSchema = z.enum(["todo", "in_progress", "done", "blocked"]);
+export const RiskLevelSchema = z.enum(["low", "medium", "high"]);
 
 export const PlanScheduleEntrySchema = z.object({
   id: z.string(),
@@ -32,6 +34,24 @@ export const SuccessMetricSchema = z.object({
   timeline: z.string(),
 });
 
+export const RiskItemSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  impact: RiskLevelSchema,
+  likelihood: RiskLevelSchema,
+  mitigation: z.string(),
+});
+
+/**
+ * Phase 3 마이그레이션 — v2 legacy `risks: string`을 `RiskItem[]`로 자동 변환.
+ * preprocess 단계에서 string이면 한 줄당 한 risk로 split (medium/medium 기본),
+ * 이미 array이면 그대로. localStorage 키 변경 없이 무중단 호환.
+ */
+const RisksField = z.preprocess((val) => {
+  if (typeof val === "string") return legacyRisksTextToItems(val);
+  return val;
+}, z.array(RiskItemSchema).default([]));
+
 // Phase 1: nonGoals + openQuestions 도입.
 // Phase 2: northStar + successMetrics 도입.
 // v2 localStorage 호환을 위해 신규 필드는 default 값 부여 → 기존 사용자는 빈 값으로 부드럽게 마이그레이션.
@@ -52,6 +72,6 @@ export const ProjectPlanDataSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   scheduleEntries: z.array(PlanScheduleEntrySchema),
-  risks: z.string(),
+  risks: RisksField,
   etc: z.string(),
 });

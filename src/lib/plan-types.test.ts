@@ -1,17 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
+  computeRiskScore,
   createEmptyOpenQuestion,
   createEmptyPlan,
+  createEmptyRisk,
   createEmptyScheduleEntry,
   createEmptySuccessMetric,
   createScheduleEntryFromRange,
   generatePlanFileName,
+  legacyRisksTextToItems,
   sortOpenQuestions,
+  sortRisksByScore,
   sortScheduleEntriesByStart,
   TASK_STATUS_LABEL,
   type OpenQuestionItem,
   type ProjectPlanData,
   type PlanScheduleEntry,
+  type RiskItem,
 } from "./plan-types";
 
 describe("createEmpty* factories", () => {
@@ -43,6 +48,20 @@ describe("createEmpty* factories", () => {
     const p = createEmptyPlan();
     expect(p.northStar).toBe("");
     expect(p.successMetrics).toEqual([]);
+  });
+
+  it("createEmptyPlan exposes risks as empty array (Phase 3)", () => {
+    const p = createEmptyPlan();
+    expect(p.risks).toEqual([]);
+  });
+
+  it("createEmptyRisk defaults to medium/medium with blank text", () => {
+    const r = createEmptyRisk();
+    expect(r.id).toBeTruthy();
+    expect(r.description).toBe("");
+    expect(r.impact).toBe("medium");
+    expect(r.likelihood).toBe("medium");
+    expect(r.mitigation).toBe("");
   });
 
   it("createEmptyOpenQuestion defaults to unresolved with blank fields", () => {
@@ -105,7 +124,7 @@ describe("generatePlanFileName", () => {
     startDate: "",
     endDate: "",
     scheduleEntries: [],
-    risks: "",
+    risks: [],
     etc: "",
   };
 
@@ -152,6 +171,77 @@ describe("sortScheduleEntriesByStart", () => {
     const inputCopy = [...input];
     sortScheduleEntriesByStart(input);
     expect(input).toEqual(inputCopy);
+  });
+});
+
+describe("Risk helpers (Phase 3)", () => {
+  const r = (
+    id: string,
+    impact: RiskItem["impact"],
+    likelihood: RiskItem["likelihood"]
+  ): RiskItem => ({
+    id,
+    description: id,
+    impact,
+    likelihood,
+    mitigation: "",
+  });
+
+  describe("computeRiskScore", () => {
+    it("multiplies impact × likelihood (low=1, medium=2, high=3)", () => {
+      expect(computeRiskScore(r("a", "low", "low"))).toBe(1);
+      expect(computeRiskScore(r("b", "medium", "medium"))).toBe(4);
+      expect(computeRiskScore(r("c", "high", "high"))).toBe(9);
+      expect(computeRiskScore(r("d", "high", "medium"))).toBe(6);
+      expect(computeRiskScore(r("e", "low", "high"))).toBe(3);
+    });
+  });
+
+  describe("sortRisksByScore", () => {
+    it("sorts by score descending (stable on tie)", () => {
+      const items = [
+        r("a", "low", "low"), // 1
+        r("b", "high", "high"), // 9
+        r("c", "medium", "high"), // 6
+        r("d", "high", "low"), // 3
+      ];
+      const sorted = sortRisksByScore(items);
+      expect(sorted.map((x) => x.id)).toEqual(["b", "c", "d", "a"]);
+    });
+
+    it("does not mutate input", () => {
+      const items = [r("a", "low", "low"), r("b", "high", "high")];
+      const copy = [...items];
+      sortRisksByScore(items);
+      expect(items).toEqual(copy);
+    });
+  });
+
+  describe("legacyRisksTextToItems (v2 → v3 migration)", () => {
+    it("returns empty array for empty/whitespace string", () => {
+      expect(legacyRisksTextToItems("")).toEqual([]);
+      expect(legacyRisksTextToItems("   \n  \n")).toEqual([]);
+    });
+
+    it("splits by newline, trims, filters blanks", () => {
+      const out = legacyRisksTextToItems("외부 API 지연\n\n  레거시 정합성  \n인력 부족");
+      expect(out).toHaveLength(3);
+      expect(out.map((x) => x.description)).toEqual([
+        "외부 API 지연",
+        "레거시 정합성",
+        "인력 부족",
+      ]);
+    });
+
+    it("each migrated item has id, medium/medium defaults, blank mitigation", () => {
+      const out = legacyRisksTextToItems("a\nb");
+      for (const item of out) {
+        expect(item.id).toBeTruthy();
+        expect(item.impact).toBe("medium");
+        expect(item.likelihood).toBe("medium");
+        expect(item.mitigation).toBe("");
+      }
+    });
   });
 });
 

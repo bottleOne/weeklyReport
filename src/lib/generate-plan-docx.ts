@@ -17,8 +17,16 @@ import type {
   PlanScheduleEntry,
   OpenQuestionItem,
   SuccessMetric,
+  RiskItem,
 } from "./plan-types";
-import { TASK_STATUS_LABEL, sortOpenQuestions, sortScheduleEntriesByStart } from "./plan-types";
+import {
+  TASK_STATUS_LABEL,
+  RISK_LEVEL_LABEL,
+  computeRiskScore,
+  sortOpenQuestions,
+  sortRisksByScore,
+  sortScheduleEntriesByStart,
+} from "./plan-types";
 import { formatDateRange } from "./types";
 
 const FONT_SIZE = 20; // 10pt
@@ -97,6 +105,56 @@ function cell(
           children: [makeText(line, { bold: opts?.bold ?? false })],
         })
     ),
+  });
+}
+
+function buildRisksTable(items: RiskItem[]): Table {
+  const COL_NUM = 600;
+  const COL_DESC = 3000;
+  const COL_IMPACT = 1200;
+  const COL_LIKE = 1200;
+  const COL_SCORE = 800;
+  const COL_MIT = 2200;
+  const TOTAL = COL_NUM + COL_DESC + COL_IMPACT + COL_LIKE + COL_SCORE + COL_MIT;
+
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      cell("#", COL_NUM, { bold: true, align: AlignmentType.CENTER }),
+      cell("리스크", COL_DESC, { bold: true, align: AlignmentType.CENTER }),
+      cell("영향도", COL_IMPACT, { bold: true, align: AlignmentType.CENTER }),
+      cell("확률", COL_LIKE, { bold: true, align: AlignmentType.CENTER }),
+      cell("점수", COL_SCORE, { bold: true, align: AlignmentType.CENTER }),
+      cell("대응 방안", COL_MIT, { bold: true, align: AlignmentType.CENTER }),
+    ],
+  });
+
+  const dataRows: TableRow[] = items.length
+    ? items.map(
+        (r, idx) =>
+          new TableRow({
+            children: [
+              cell(String(idx + 1), COL_NUM, { align: AlignmentType.CENTER }),
+              cell(r.description || "-", COL_DESC),
+              cell(RISK_LEVEL_LABEL[r.impact], COL_IMPACT, { align: AlignmentType.CENTER }),
+              cell(RISK_LEVEL_LABEL[r.likelihood], COL_LIKE, { align: AlignmentType.CENTER }),
+              cell(String(computeRiskScore(r)), COL_SCORE, {
+                bold: true,
+                align: AlignmentType.CENTER,
+              }),
+              cell(r.mitigation || "-", COL_MIT),
+            ],
+          })
+      )
+    : [
+        new TableRow({
+          children: [cell("(등록된 리스크 없음)", TOTAL, { align: AlignmentType.CENTER })],
+        }),
+      ];
+
+  return new Table({
+    width: { size: TOTAL, type: WidthType.DXA },
+    rows: [headerRow, ...dataRows],
   });
 }
 
@@ -267,7 +325,8 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
   children.push(paragraph(""));
 
   children.push(heading("9. 리스크"));
-  children.push(...multilineParagraphs(data.risks));
+  children.push(buildRisksTable(sortRisksByScore(data.risks)));
+  children.push(paragraph(""));
 
   children.push(heading("10. 기타"));
   children.push(...multilineParagraphs(data.etc));

@@ -38,7 +38,15 @@ const sample: ProjectPlanData = {
       status: "in_progress",
     },
   ],
-  risks: "데이터 마이그레이션 복잡도",
+  risks: [
+    {
+      id: "r1",
+      description: "데이터 마이그레이션 복잡도",
+      impact: "high",
+      likelihood: "medium",
+      mitigation: "사전 정제 스크립트",
+    },
+  ],
   etc: "",
 };
 
@@ -73,6 +81,16 @@ describe("generatePlanDocxBuffer", () => {
     const buffer = await generatePlanDocxBuffer(sample);
     const xml = await extractDocumentXml(buffer);
     expect(xml).toContain("☐ 외부 SSO 적용 시기는?");
+  });
+
+  it("renders Phase 3 risks table with score and Korean labels", async () => {
+    const buffer = await generatePlanDocxBuffer(sample);
+    const xml = await extractDocumentXml(buffer);
+    expect(xml).toContain("데이터 마이그레이션 복잡도");
+    expect(xml).toContain("사전 정제 스크립트");
+    expect(xml).toContain("높음"); // impact
+    expect(xml).toContain("중간"); // likelihood
+    expect(xml).toContain("점수");
   });
 
   it("renders Phase 2 North Star + 성공 지표 table", async () => {

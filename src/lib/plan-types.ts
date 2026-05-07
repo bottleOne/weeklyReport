@@ -46,6 +46,32 @@ export interface SuccessMetric {
   timeline: string;
 }
 
+/** Risk 영향도 / 발생 확률 등급. low=1 / medium=2 / high=3 으로 점수화. */
+export type RiskLevel = "low" | "medium" | "high";
+
+export const RISK_LEVEL_LABEL: Record<RiskLevel, string> = {
+  low: "낮음",
+  medium: "중간",
+  high: "높음",
+};
+
+export const RISK_LEVEL_SCORE: Record<RiskLevel, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+};
+
+/**
+ * 리스크 — 자유서술 대신 구조화. impact × likelihood 로 위험도 점수(1~9) 계산.
+ */
+export interface RiskItem {
+  id: string;
+  description: string;
+  impact: RiskLevel;
+  likelihood: RiskLevel;
+  mitigation: string;
+}
+
 export interface ProjectPlanData {
   // 기본 정보
   title: string;
@@ -73,8 +99,8 @@ export interface ProjectPlanData {
   endDate: string;
   scheduleEntries: PlanScheduleEntry[];
 
-  // 기타
-  risks: string;
+  // 리스크 (Phase 3에서 자유서술 → 구조화) + 기타
+  risks: RiskItem[];
   etc: string;
 }
 
@@ -120,7 +146,7 @@ export function createEmptyPlan(): ProjectPlanData {
     startDate: "",
     endDate: "",
     scheduleEntries: [],
-    risks: "",
+    risks: [],
     etc: "",
   };
 }
@@ -142,6 +168,46 @@ export function createEmptySuccessMetric(): SuccessMetric {
     method: "",
     timeline: "",
   };
+}
+
+export function createEmptyRisk(): RiskItem {
+  return {
+    id: newId(),
+    description: "",
+    impact: "medium",
+    likelihood: "medium",
+    mitigation: "",
+  };
+}
+
+/** 위험도 점수 = impact × likelihood (1~9). 정렬·시각 강조 기준. */
+export function computeRiskScore(item: RiskItem): number {
+  return RISK_LEVEL_SCORE[item.impact] * RISK_LEVEL_SCORE[item.likelihood];
+}
+
+/** 위험도 점수 내림차순 정렬 (원본 불변). 동점은 입력 순서 유지(stable). */
+export function sortRisksByScore(items: RiskItem[]): RiskItem[] {
+  return [...items].sort((a, b) => computeRiskScore(b) - computeRiskScore(a));
+}
+
+/**
+ * Phase 3 마이그레이션 — v2 legacy `risks: string`을 `RiskItem[]`로 변환.
+ * 한 줄에 한 risk로 split, 빈 줄 제외. impact/likelihood는 medium 기본값.
+ * 사용자는 페이지 로드 후 카드별로 영향도/확률만 보강.
+ */
+export function legacyRisksTextToItems(text: string): RiskItem[] {
+  if (!text || !text.trim()) return [];
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((description) => ({
+      id: newId(),
+      description,
+      impact: "medium" as const,
+      likelihood: "medium" as const,
+      mitigation: "",
+    }));
 }
 
 /**

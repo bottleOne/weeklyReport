@@ -49,7 +49,22 @@ const sample: ProjectPlanData = {
       status: "in_progress",
     },
   ],
-  risks: "데이터 마이그레이션 복잡도",
+  risks: [
+    {
+      id: "r1",
+      description: "데이터 마이그레이션 복잡도",
+      impact: "high",
+      likelihood: "medium",
+      mitigation: "사전 정제 스크립트",
+    },
+    {
+      id: "r2",
+      description: "외부 API 응답 지연",
+      impact: "medium",
+      likelihood: "low",
+      mitigation: "캐시 fallback",
+    },
+  ],
   etc: "",
 };
 
@@ -84,6 +99,18 @@ describe("generatePlanMarkdown", () => {
     expect(md).toContain("## 8. 일정");
     expect(md).toContain("## 9. 리스크");
     expect(md).toContain("## 10. 기타");
+  });
+
+  it("renders risks table sorted by score descending with Korean labels", () => {
+    const md = generatePlanMarkdown(sample);
+    expect(md).toContain("| # | 리스크 | 영향도 | 확률 | 점수 | 대응 방안 |");
+    // r1: high(3) × medium(2) = 6 > r2: medium(2) × low(1) = 2
+    const idxR1 = md.indexOf("데이터 마이그레이션");
+    const idxR2 = md.indexOf("외부 API");
+    expect(idxR1).toBeLessThan(idxR2);
+    expect(md).toContain("높음");
+    expect(md).toContain("중간");
+    expect(md).toContain("낮음");
   });
 
   it("renders open questions with checkbox + indented resolution", () => {
