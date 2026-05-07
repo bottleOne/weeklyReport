@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, CSSProperties } from "react";
 import { DayPicker, type DateRange, type CalendarDay, type Modifiers } from "react-day-picker";
 import { ko } from "date-fns/locale";
 import "react-day-picker/style.css";
@@ -99,6 +99,100 @@ interface EntryOnDate {
 const STRIP_TOP = 22; // 일자 라벨 아래 시작 지점(px)
 const STRIP_HEIGHT = 16; // 띠 안에 제목 텍스트가 들어갈 만큼
 const STRIP_GAP = 2;
+
+// 매 렌더마다 동일한 스타일 객체 리터럴 생성 비용 회피를 위해 모듈 스코프 상수로 추출.
+// 동적 값(top/left/right/borderRadius/색상 등)은 호출부에서 spread + 덮어쓰기.
+const STRIP_BASE_STYLE: CSSProperties = {
+  position: "absolute",
+  height: STRIP_HEIGHT,
+  boxSizing: "border-box",
+  pointerEvents: "auto",
+  cursor: "pointer",
+  overflow: "hidden",
+  fontSize: "0.6875rem", // 11px
+  lineHeight: `${STRIP_HEIGHT}px`,
+  fontWeight: 500,
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  transition:
+    "transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease, border-color 0.12s ease",
+};
+
+const DAY_LABEL_STYLE: CSSProperties = {
+  position: "absolute",
+  top: 6,
+  left: 8,
+  fontSize: "0.8125rem",
+  fontWeight: 500,
+  lineHeight: 1,
+  color: "inherit",
+};
+
+const OVERFLOW_STRIP_STYLE: CSSProperties = {
+  position: "absolute",
+  bottom: 2,
+  left: 2,
+  right: 2,
+  height: STRIP_HEIGHT,
+  border: "1px solid #d1d5db",
+  borderRadius: 4,
+  boxSizing: "border-box",
+  cursor: "pointer",
+  overflow: "hidden",
+  color: "#4b5563",
+  fontSize: "0.6875rem",
+  lineHeight: `${STRIP_HEIGHT}px`,
+  fontWeight: 600,
+  paddingLeft: 6,
+  paddingRight: 6,
+  whiteSpace: "nowrap",
+  textAlign: "center",
+  letterSpacing: "0.5px",
+};
+
+const DROPDOWN_STYLE: CSSProperties = {
+  position: "absolute",
+  top: "calc(100% + 4px)",
+  left: 0,
+  minWidth: 220,
+  maxWidth: 280,
+  maxHeight: 280,
+  overflowY: "auto",
+  zIndex: 50,
+  backgroundColor: "white",
+  border: "1px solid #e5e7eb",
+  borderRadius: 8,
+  boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+  padding: 6,
+  textAlign: "left",
+};
+
+const DROPDOWN_ITEM_STYLE: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  width: "100%",
+  padding: "6px 8px",
+  borderRadius: 4,
+  cursor: "pointer",
+  fontSize: "0.8125rem",
+  textAlign: "left",
+  color: "#111827",
+};
+
+const DRAFT_STRIP_BASE_STYLE: CSSProperties = {
+  position: "absolute",
+  height: STRIP_HEIGHT,
+  backgroundColor: "#6366f1",
+  color: "white",
+  pointerEvents: "none",
+  overflow: "hidden",
+  fontSize: "0.6875rem",
+  lineHeight: `${STRIP_HEIGHT}px`,
+  fontWeight: 500,
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+};
 
 // 셀에 표시되는 띠 개수 컷오프. stackIdx 0..MAX_VISIBLE_LANES-1 까지 띠로 보이고,
 // stackIdx >= MAX_VISIBLE_LANES인 entry는 셀 하단의 "..." 띠 하나에 묶여 클릭 시 드롭다운으로 펼쳐진다.
@@ -317,19 +411,7 @@ export default function PlanScheduleCalendar({
             onMouseEnter={() => continueDrag(day.date)}
             style={{ position: "relative" }}
           >
-            <span
-              style={{
-                position: "absolute",
-                top: 6,
-                left: 8,
-                fontSize: "0.8125rem",
-                fontWeight: 500,
-                lineHeight: 1,
-                color: "inherit",
-              }}
-            >
-              {day.date.getDate()}
-            </span>
+            <span style={DAY_LABEL_STYLE}>{day.date.getDate()}</span>
             {visibleEntries.map((ce) => {
               const isHl = hl === ce.entry.id;
               const palette = LANE_COLORS[ce.colorIndex % LANE_COLORS.length];
@@ -351,11 +433,10 @@ export default function PlanScheduleCalendar({
                   }}
                   title={ce.entry.title || "일정"}
                   style={{
-                    position: "absolute",
+                    ...STRIP_BASE_STYLE,
                     top: topOffset,
                     left: leftOffset,
                     right: ce.isEnd ? 2 : 0,
-                    height: STRIP_HEIGHT,
                     backgroundColor: isHl ? palette.bgHl : palette.bg,
                     borderTopLeftRadius: ce.isStart ? 4 : 0,
                     borderBottomLeftRadius: ce.isStart ? 4 : 0,
@@ -370,7 +451,6 @@ export default function PlanScheduleCalendar({
                     borderRight: ce.isEnd
                       ? `1px solid ${palette.text}${isHl ? "55" : "22"}`
                       : "none",
-                    boxSizing: "border-box",
                     // hover 시 살짝 떠오르는 효과
                     transform: isHl ? "translateY(-2px)" : undefined,
                     boxShadow: isHl
@@ -379,19 +459,9 @@ export default function PlanScheduleCalendar({
                         ? "0 1px 2px rgba(0,0,0,0.08)"
                         : undefined,
                     zIndex: isHl ? 10 : undefined,
-                    transition:
-                      "transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease, border-color 0.12s ease",
-                    pointerEvents: "auto",
-                    cursor: "pointer",
-                    overflow: "hidden",
                     color: palette.text,
-                    fontSize: "0.6875rem", // 11px
-                    lineHeight: `${STRIP_HEIGHT}px`,
-                    fontWeight: 500,
                     paddingLeft: ce.isStart ? 6 : 4,
                     paddingRight: ce.isEnd ? 6 : 4,
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
                   }}
                 >
                   {ce.isStart ? ce.entry.title || "일정" : ""}
@@ -401,7 +471,7 @@ export default function PlanScheduleCalendar({
             {inDraft && (
               <div
                 style={{
-                  position: "absolute",
+                  ...DRAFT_STRIP_BASE_STYLE,
                   // 기존 visible stack의 가장 깊은 stackIdx + 한 칸 띄워서 아래에 표시.
                   // "..." 띠는 셀 하단에 따로 고정되므로 여기서는 visibleEntries만 고려.
                   top:
@@ -412,22 +482,12 @@ export default function PlanScheduleCalendar({
                         }% + ${STRIP_HEIGHT + STRIP_GAP}px)`,
                   left: dragStart ? 2 : 0,
                   right: dragEnd ? 2 : 0,
-                  height: STRIP_HEIGHT,
-                  backgroundColor: "#6366f1",
-                  color: "white",
                   borderTopLeftRadius: dragStart ? 4 : 0,
                   borderBottomLeftRadius: dragStart ? 4 : 0,
                   borderTopRightRadius: dragEnd ? 4 : 0,
                   borderBottomRightRadius: dragEnd ? 4 : 0,
-                  pointerEvents: "none",
-                  overflow: "hidden",
-                  fontSize: "0.6875rem",
-                  lineHeight: `${STRIP_HEIGHT}px`,
-                  fontWeight: 500,
                   paddingLeft: dragStart ? 6 : 4,
                   paddingRight: dragEnd ? 6 : 4,
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
                 }}
               >
                 {dragStart ? "새 일정" : ""}
@@ -445,27 +505,8 @@ export default function PlanScheduleCalendar({
                 }}
                 title={`숨겨진 일정 ${overflowEntries.length}개`}
                 style={{
-                  position: "absolute",
-                  // 셀 가장 하단 고정 — visible 띠 개수와 무관하게 일관된 위치
-                  bottom: 2,
-                  left: 2,
-                  right: 2,
-                  height: STRIP_HEIGHT,
+                  ...OVERFLOW_STRIP_STYLE,
                   backgroundColor: isDropdownOpen ? "#d1d5db" : "#e5e7eb",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 4,
-                  boxSizing: "border-box",
-                  cursor: "pointer",
-                  overflow: "hidden",
-                  color: "#4b5563",
-                  fontSize: "0.6875rem",
-                  lineHeight: `${STRIP_HEIGHT}px`,
-                  fontWeight: 600,
-                  paddingLeft: 6,
-                  paddingRight: 6,
-                  whiteSpace: "nowrap",
-                  textAlign: "center",
-                  letterSpacing: "0.5px",
                   zIndex: isDropdownOpen ? 11 : undefined,
                 }}
               >
@@ -477,22 +518,7 @@ export default function PlanScheduleCalendar({
                 className="rdp-day-dropdown"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 4px)",
-                  left: 0,
-                  minWidth: 220,
-                  maxWidth: 280,
-                  maxHeight: 280,
-                  overflowY: "auto",
-                  zIndex: 50,
-                  backgroundColor: "white",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 8,
-                  boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-                  padding: 6,
-                  textAlign: "left",
-                }}
+                style={DROPDOWN_STYLE}
               >
                 <div
                   style={{
@@ -529,17 +555,8 @@ export default function PlanScheduleCalendar({
                         }
                       }}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        width: "100%",
-                        padding: "6px 8px",
-                        borderRadius: 4,
+                        ...DROPDOWN_ITEM_STYLE,
                         backgroundColor: isHlItem ? "#f3f4f6" : "transparent",
-                        cursor: "pointer",
-                        fontSize: "0.8125rem",
-                        textAlign: "left",
-                        color: "#111827",
                       }}
                     >
                       <span
