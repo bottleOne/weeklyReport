@@ -79,27 +79,28 @@ const StakeholdersField = z.preprocess((val) => {
 
 // Phase 1: nonGoals + openQuestions 도입.
 // Phase 2: northStar + successMetrics 도입.
-// v2 localStorage 호환을 위해 신규 필드는 default 값 부여 → 기존 사용자는 빈 값으로 부드럽게 마이그레이션.
+// 모든 필드에 default를 부여 — localStorage에 누락된 키가 있어도 parse 실패 → 데이터 유실 방지.
+// 기존 사용자는 빈 값으로 부드럽게 마이그레이션됨.
 export const ProjectPlanDataSchema = z.object({
-  title: z.string(),
-  authorName: z.string(),
-  teamName: z.string(),
-  createdDate: z.string(),
+  title: z.string().default(""),
+  authorName: z.string().default(""),
+  teamName: z.string().default(""),
+  createdDate: z.string().default(""),
   // Phase 5 — 문서 상태 + 변경 이력. 신규 필드라 default로 v2~v4 호환.
   status: PlanStatusSchema.default("draft"),
   changeLog: z.array(ChangeLogEntrySchema).default([]),
   stakeholders: StakeholdersField,
-  background: z.string(),
-  objective: z.string(),
-  scope: z.string(),
-  deliverables: z.string(),
+  background: z.string().default(""),
+  objective: z.string().default(""),
+  scope: z.string().default(""),
+  deliverables: z.string().default(""),
   nonGoals: z.string().default(""),
   openQuestions: z.array(OpenQuestionItemSchema).default([]),
   northStar: z.string().default(""),
   successMetrics: z.array(SuccessMetricSchema).default([]),
-  startDate: z.string(),
-  endDate: z.string(),
-  scheduleEntries: z.array(PlanScheduleEntrySchema),
+  startDate: z.string().default(""),
+  endDate: z.string().default(""),
+  scheduleEntries: z.array(PlanScheduleEntrySchema).default([]),
   risks: RisksField,
-  etc: z.string(),
+  etc: z.string().default(""),
 });

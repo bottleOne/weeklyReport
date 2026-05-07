@@ -27,8 +27,9 @@ interface PlanPreviewProps {
 
 function paragraph(text: string) {
   if (!text.trim()) return <span className="text-gray-400">(미입력)</span>;
+  // 텍스트를 줄단위로 쪼개 렌더 — 정렬·삭제가 없는 read-only 출력이라 index key 안전
   return text.split("\n").map((line, i) => (
-    <p key={i} className="leading-relaxed">
+    <p key={`line-${i}`} className="leading-relaxed">
       {line || " "}
     </p>
   ));

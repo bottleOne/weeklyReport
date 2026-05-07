@@ -16,7 +16,7 @@ export default function PlanStatusBar({ status, onChange }: PlanStatusBarProps) 
     draft: "border-gray-300 bg-gray-100 text-gray-700",
     review: "border-amber-300 bg-amber-50 text-amber-800",
     approved: "border-emerald-300 bg-emerald-50 text-emerald-700",
-    archived: "border-gray-300 bg-gray-50 text-gray-400",
+    archived: "border-gray-300 bg-gray-50 text-gray-400 line-through",
   };
   return (
     <select

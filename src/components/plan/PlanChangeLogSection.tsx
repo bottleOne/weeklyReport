@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { sortChangeLogDesc, type ChangeLogEntry } from "@/lib/plan-types";
 
 interface PlanChangeLogSectionProps {
@@ -23,6 +23,12 @@ export default function PlanChangeLogSection({
 }: PlanChangeLogSectionProps) {
   const [draftSummary, setDraftSummary] = useState("");
   const [draftAuthor, setDraftAuthor] = useState(defaultAuthor);
+  // 사용자가 input을 직접 편집하기 전까지는 defaultAuthor 변경을 반영.
+  // 직접 편집 후엔 사용자 입력이 우선 — defaultAuthor가 바뀌어도 덮어쓰지 않음.
+  const userEditedAuthor = useRef(false);
+  useEffect(() => {
+    if (!userEditedAuthor.current) setDraftAuthor(defaultAuthor);
+  }, [defaultAuthor]);
   const sorted = sortChangeLogDesc(items);
 
   const handleAdd = () => {
@@ -71,7 +77,10 @@ export default function PlanChangeLogSection({
             type="text"
             placeholder="이름"
             value={draftAuthor}
-            onChange={(e) => setDraftAuthor(e.target.value)}
+            onChange={(e) => {
+              userEditedAuthor.current = true;
+              setDraftAuthor(e.target.value);
+            }}
             className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm outline-none focus:border-indigo-500"
           />
         </div>

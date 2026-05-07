@@ -12,7 +12,10 @@ interface PlanTextSectionProps {
   onChange: (key: string, value: string) => void;
 }
 
-/** 배경/목표/범위/이해관계자/산출물 같은 textarea 묶음을 일괄 렌더. */
+/**
+ * 본문 4섹션(배경/목표/범위/산출물) 일괄 렌더.
+ * 이해관계자는 Phase 4에서 구조화 카드로 분리되어 여기 포함되지 않는다.
+ */
 export default function PlanTextSection({ fields, onChange }: PlanTextSectionProps) {
   return (
     <div className="mb-5 rounded-xl border border-gray-200 bg-white p-5">
