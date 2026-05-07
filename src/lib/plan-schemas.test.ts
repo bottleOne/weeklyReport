@@ -38,6 +38,9 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
     expect(parsed.stakeholders).toHaveLength(3);
     expect(parsed.stakeholders[0].name).toBe("기획팀");
     expect(parsed.stakeholders[0].responsibility).toBe("contributor");
+    // Phase 5 default: status="draft", changeLog=[]
+    expect(parsed.status).toBe("draft");
+    expect(parsed.changeLog).toEqual([]);
   });
 
   it("preserves provided nonGoals and openQuestions when present", () => {
@@ -167,6 +170,55 @@ describe("ProjectPlanDataSchema — Phase 4 stakeholders migration & raw", () =>
     expect(parsed.stakeholders[0].name).toBe("기획팀");
     expect(parsed.stakeholders[1].name).toBe("보안팀");
     expect(parsed.stakeholders[0].responsibility).toBe("contributor");
+  });
+});
+
+describe("ProjectPlanDataSchema — Phase 5 status & changeLog", () => {
+  const base = {
+    title: "",
+    authorName: "",
+    teamName: "",
+    createdDate: "2026-05-07",
+    background: "",
+    objective: "",
+    scope: "",
+    stakeholders: [],
+    deliverables: "",
+    nonGoals: "",
+    openQuestions: [],
+    northStar: "",
+    successMetrics: [],
+    startDate: "",
+    endDate: "",
+    scheduleEntries: [],
+    risks: [],
+    etc: "",
+  };
+
+  it("missing status defaults to 'draft' and changeLog defaults to []", () => {
+    const parsed = ProjectPlanDataSchema.parse(base);
+    expect(parsed.status).toBe("draft");
+    expect(parsed.changeLog).toEqual([]);
+  });
+
+  it("preserves provided status + changeLog entries", () => {
+    const payload = {
+      ...base,
+      status: "approved",
+      changeLog: [
+        { id: "c1", date: "2026-05-01", author: "전병일", summary: "초안 완료" },
+        { id: "c2", date: "2026-05-05", author: "이OO", summary: "리뷰 의견 반영" },
+      ],
+    };
+    const parsed = ProjectPlanDataSchema.parse(payload);
+    expect(parsed.status).toBe("approved");
+    expect(parsed.changeLog).toHaveLength(2);
+    expect(parsed.changeLog[1].summary).toBe("리뷰 의견 반영");
+  });
+
+  it("rejects unknown status value", () => {
+    const payload = { ...base, status: "wip" as unknown as string };
+    expect(() => ProjectPlanDataSchema.parse(payload)).toThrow();
   });
 });
 

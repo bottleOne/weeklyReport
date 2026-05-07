@@ -3,7 +3,9 @@ import {
   TASK_STATUS_LABEL,
   RISK_LEVEL_LABEL,
   RESPONSIBILITY_LABEL,
+  PLAN_STATUS_LABEL,
   computeRiskScore,
+  sortChangeLogDesc,
   sortOpenQuestions,
   sortRisksByScore,
   sortScheduleEntriesByStart,
@@ -17,7 +19,7 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
   lines.push(`# ${data.title || "프로젝트 기획서"}`);
   lines.push("");
   lines.push(
-    `> ${data.teamName || "팀"} · 작성자 ${data.authorName || "이름"} · 작성일 ${data.createdDate}`
+    `> ${data.teamName || "팀"} · 작성자 ${data.authorName || "이름"} · 작성일 ${data.createdDate} · 상태 **${PLAN_STATUS_LABEL[data.status]}**`
   );
   lines.push("");
 
@@ -80,8 +82,22 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
 
   pushRisks(lines, data);
   pushSection(lines, "9. 기타", data.etc);
+  pushChangeLog(lines, data);
 
   return lines.join("\n");
+}
+
+function pushChangeLog(lines: string[], data: ProjectPlanData): void {
+  if (data.changeLog.length === 0) return;
+  lines.push("## 변경 이력");
+  lines.push("");
+  lines.push("| 날짜 | 작성자 | 변경 요약 |");
+  lines.push("|---|---|---|");
+  const safe = (s: string) => s.replace(/\|/g, "\\|").trim() || "-";
+  for (const e of sortChangeLogDesc(data.changeLog)) {
+    lines.push(`| ${e.date} | ${safe(e.author)} | ${safe(e.summary)} |`);
+  }
+  lines.push("");
 }
 
 function pushStakeholders(lines: string[], data: ProjectPlanData): void {

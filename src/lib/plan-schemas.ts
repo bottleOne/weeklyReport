@@ -9,6 +9,14 @@ import { legacyRisksTextToItems, legacyStakeholdersTextToItems } from "./plan-ty
 export const TaskStatusSchema = z.enum(["todo", "in_progress", "done", "blocked"]);
 export const RiskLevelSchema = z.enum(["low", "medium", "high"]);
 export const ResponsibilitySchema = z.enum(["owner", "contributor", "reviewer", "informed"]);
+export const PlanStatusSchema = z.enum(["draft", "review", "approved", "archived"]);
+
+export const ChangeLogEntrySchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  author: z.string(),
+  summary: z.string(),
+});
 
 export const PlanScheduleEntrySchema = z.object({
   id: z.string(),
@@ -77,6 +85,9 @@ export const ProjectPlanDataSchema = z.object({
   authorName: z.string(),
   teamName: z.string(),
   createdDate: z.string(),
+  // Phase 5 — 문서 상태 + 변경 이력. 신규 필드라 default로 v2~v4 호환.
+  status: PlanStatusSchema.default("draft"),
+  changeLog: z.array(ChangeLogEntrySchema).default([]),
   stakeholders: StakeholdersField,
   background: z.string(),
   objective: z.string(),

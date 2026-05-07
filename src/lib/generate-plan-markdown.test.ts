@@ -7,6 +7,11 @@ const sample: ProjectPlanData = {
   authorName: "전병일",
   teamName: "개발2팀",
   createdDate: "2026-04-25",
+  status: "review",
+  changeLog: [
+    { id: "c1", date: "2026-04-25", author: "전병일", summary: "초안 작성" },
+    { id: "c2", date: "2026-05-01", author: "이OO", summary: "검토 의견 반영" },
+  ],
   background: "현행 권한 체계의 한계.\nRBAC 도입 필요.",
   objective: "권한 관리 표준화",
   scope: "포함: 권한 모델 / 제외: 외부 SSO",
@@ -102,6 +107,17 @@ describe("generatePlanMarkdown", () => {
     expect(md).toContain("## 7. 일정");
     expect(md).toContain("## 8. 리스크");
     expect(md).toContain("## 9. 기타");
+  });
+
+  it("renders Phase 5 status in header line and change log table", () => {
+    const md = generatePlanMarkdown(sample);
+    expect(md).toContain("상태 **검토 중**");
+    expect(md).toContain("## 변경 이력");
+    expect(md).toContain("| 날짜 | 작성자 | 변경 요약 |");
+    // 최신이 위로 (2026-05-01 > 2026-04-25)
+    const idxLater = md.indexOf("검토 의견 반영");
+    const idxEarlier = md.indexOf("초안 작성");
+    expect(idxLater).toBeLessThan(idxEarlier);
   });
 
   it("renders stakeholders table with name/role/responsibility", () => {

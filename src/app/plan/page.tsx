@@ -9,6 +9,7 @@ import type {
   SuccessMetric,
   RiskItem,
   Stakeholder,
+  PlanStatus,
 } from "@/lib/plan-types";
 import {
   createEmptyPlan,
@@ -16,8 +17,10 @@ import {
   createEmptySuccessMetric,
   createEmptyRisk,
   createEmptyStakeholder,
+  createChangeLogEntry,
   createScheduleEntryFromRange,
   generatePlanFileName,
+  PLAN_STATUS_LABEL,
 } from "@/lib/plan-types";
 import { ProjectPlanDataSchema } from "@/lib/plan-schemas";
 import { loadPersisted, clearPersisted, usePersistedState } from "@/hooks/usePersistedState";
@@ -30,6 +33,8 @@ import PlanNorthStarCard from "@/components/plan/PlanNorthStarCard";
 import PlanMetricsSection from "@/components/plan/PlanMetricsSection";
 import PlanRisksSection from "@/components/plan/PlanRisksSection";
 import PlanStakeholdersSection from "@/components/plan/PlanStakeholdersSection";
+import PlanStatusBar from "@/components/plan/PlanStatusBar";
+import PlanChangeLogSection from "@/components/plan/PlanChangeLogSection";
 import PlanScheduleCalendar from "@/components/plan/PlanScheduleCalendar";
 import PlanScheduleEntryCard from "@/components/plan/PlanScheduleEntryCard";
 import PlanPreview from "@/components/plan/PlanPreview";
@@ -254,6 +259,32 @@ export default function PlanPage() {
     .map((s) => s.name.trim())
     .filter((name) => name.length > 0);
 
+  // ===== 문서 상태 + 변경 이력 (Phase 5) =====
+  // 상태 전환 시 changeLog에 자동 항목 추가. 이전 → 다음을 한 번에 setPlan으로 처리.
+  const handleStatusChange = useCallback((next: PlanStatus) => {
+    setPlan((prev) => {
+      if (prev.status === next) return prev;
+      const auto = createChangeLogEntry(
+        prev.authorName || "-",
+        `상태 변경: ${PLAN_STATUS_LABEL[prev.status]} → ${PLAN_STATUS_LABEL[next]}`
+      );
+      return {
+        ...prev,
+        status: next,
+        changeLog: [...prev.changeLog, auto],
+      };
+    });
+  }, []);
+
+  const addChangeLog = useCallback((author: string, summary: string) => {
+    const item = createChangeLogEntry(author, summary);
+    setPlan((prev) => ({ ...prev, changeLog: [...prev.changeLog, item] }));
+  }, []);
+
+  const removeChangeLog = useCallback((id: string) => {
+    setPlan((prev) => ({ ...prev, changeLog: prev.changeLog.filter((e) => e.id !== id) }));
+  }, []);
+
   const resetForm = () => {
     toast("모든 입력 내용을 초기화하시겠습니까?", {
       action: {
@@ -400,7 +431,14 @@ export default function PlanPage() {
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900">프로젝트 기획서</h1>
+          <div className="flex items-center gap-3">
+            <h1
+              className={`text-2xl font-extrabold text-gray-900 ${plan.status === "archived" ? "text-gray-400 line-through" : ""}`}
+            >
+              프로젝트 기획서
+            </h1>
+            <PlanStatusBar status={plan.status} onChange={handleStatusChange} />
+          </div>
           <p className="text-sm text-gray-500">
             왼쪽에서 기획서/일정을 전환하며 작성, .docx / .pdf / .md로 다운로드
           </p>
@@ -540,6 +578,12 @@ export default function PlanPage() {
                   className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
                 />
               </div>
+              <PlanChangeLogSection
+                items={plan.changeLog}
+                defaultAuthor={plan.authorName || ""}
+                onAdd={addChangeLog}
+                onRemove={removeChangeLog}
+              />
             </div>
           )}
 

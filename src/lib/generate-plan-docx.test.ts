@@ -8,6 +8,8 @@ const sample: ProjectPlanData = {
   authorName: "전병일",
   teamName: "개발2팀",
   createdDate: "2026-04-25",
+  status: "review",
+  changeLog: [{ id: "c1", date: "2026-04-25", author: "전병일", summary: "초안 작성" }],
   background: "현행 권한 체계의 한계",
   objective: "권한 관리 표준화",
   scope: "포함: 권한 모델",
@@ -77,6 +79,14 @@ describe("generatePlanDocxBuffer", () => {
     expect(xml).toContain("7. 일정");
     expect(xml).toContain("8. 리스크");
     expect(xml).toContain("9. 기타");
+  });
+
+  it("renders Phase 5 status in header line and 변경 이력 table", async () => {
+    const buffer = await generatePlanDocxBuffer(sample);
+    const xml = await extractDocumentXml(buffer);
+    expect(xml).toContain("[검토 중]");
+    expect(xml).toContain("변경 이력");
+    expect(xml).toContain("초안 작성");
   });
 
   it("renders stakeholders table", async () => {

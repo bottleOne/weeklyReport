@@ -19,12 +19,15 @@ import type {
   SuccessMetric,
   RiskItem,
   Stakeholder,
+  ChangeLogEntry,
 } from "./plan-types";
 import {
   TASK_STATUS_LABEL,
   RISK_LEVEL_LABEL,
   RESPONSIBILITY_LABEL,
+  PLAN_STATUS_LABEL,
   computeRiskScore,
+  sortChangeLogDesc,
   sortOpenQuestions,
   sortRisksByScore,
   sortScheduleEntriesByStart,
@@ -107,6 +110,38 @@ function cell(
           children: [makeText(line, { bold: opts?.bold ?? false })],
         })
     ),
+  });
+}
+
+function buildChangeLogTable(items: ChangeLogEntry[]): Table {
+  const COL_DATE = 1600;
+  const COL_AUTHOR = 1600;
+  const COL_SUMMARY = 5800;
+  const TOTAL = COL_DATE + COL_AUTHOR + COL_SUMMARY;
+
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      cell("날짜", COL_DATE, { bold: true, align: AlignmentType.CENTER }),
+      cell("작성자", COL_AUTHOR, { bold: true, align: AlignmentType.CENTER }),
+      cell("변경 요약", COL_SUMMARY, { bold: true, align: AlignmentType.CENTER }),
+    ],
+  });
+
+  const dataRows: TableRow[] = sortChangeLogDesc(items).map(
+    (e) =>
+      new TableRow({
+        children: [
+          cell(e.date || "-", COL_DATE, { align: AlignmentType.CENTER }),
+          cell(e.author || "-", COL_AUTHOR, { align: AlignmentType.CENTER }),
+          cell(e.summary || "-", COL_SUMMARY),
+        ],
+      })
+  );
+
+  return new Table({
+    width: { size: TOTAL, type: WidthType.DXA },
+    rows: [headerRow, ...dataRows],
   });
 }
 
@@ -315,7 +350,7 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
       spacing: { after: 400 },
       children: [
         makeText(
-          `${data.teamName || "팀"} · 작성자 ${data.authorName || "이름"} · 작성일 ${data.createdDate}`,
+          `${data.teamName || "팀"} · 작성자 ${data.authorName || "이름"} · 작성일 ${data.createdDate} · 상태 [${PLAN_STATUS_LABEL[data.status]}]`,
           { size: 18 }
         ),
       ],
@@ -373,6 +408,12 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
 
   children.push(heading("9. 기타"));
   children.push(...multilineParagraphs(data.etc));
+
+  if (data.changeLog.length > 0) {
+    children.push(heading("변경 이력"));
+    children.push(buildChangeLogTable(data.changeLog));
+    children.push(paragraph(""));
+  }
 
   const doc = new Document({
     styles: {

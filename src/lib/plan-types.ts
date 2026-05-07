@@ -72,6 +72,27 @@ export interface RiskItem {
   mitigation: string;
 }
 
+/** 문서 상태 — Draft → Review → Approved → Archived 흐름. */
+export type PlanStatus = "draft" | "review" | "approved" | "archived";
+
+export const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
+  draft: "초안",
+  review: "검토 중",
+  approved: "승인됨",
+  archived: "보관",
+};
+
+/**
+ * 변경 이력 항목 — 상태 전환 또는 수동 메모.
+ * date: ISO 문자열, author: 작성자(자동: ProjectPlanData.authorName), summary: 한 줄 요약.
+ */
+export interface ChangeLogEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  author: string;
+  summary: string;
+}
+
 /** 이해관계자 책임 (RACI lite). */
 export type Responsibility = "owner" | "contributor" | "reviewer" | "informed";
 
@@ -98,6 +119,10 @@ export interface ProjectPlanData {
   authorName: string;
   teamName: string;
   createdDate: string;
+
+  // 문서 상태 + 변경 이력 (Phase 5)
+  status: PlanStatus;
+  changeLog: ChangeLogEntry[];
 
   // 이해관계자 (Phase 4에서 자유서술 → 구조화, 본문 4번에서 분리)
   stakeholders: Stakeholder[];
@@ -156,6 +181,8 @@ export function createEmptyPlan(): ProjectPlanData {
     authorName: "",
     teamName: "",
     createdDate: getTodayLocal(),
+    status: "draft",
+    changeLog: [],
     stakeholders: [],
     background: "",
     objective: "",
@@ -239,6 +266,21 @@ export function createEmptyStakeholder(): Stakeholder {
     role: "",
     responsibility: "contributor",
   };
+}
+
+/** 변경 이력 항목 생성 — 오늘 날짜, 호출자가 author/summary 채움. */
+export function createChangeLogEntry(author: string, summary: string): ChangeLogEntry {
+  return {
+    id: newId(),
+    date: getTodayLocal(),
+    author,
+    summary,
+  };
+}
+
+/** 변경 이력 정렬 — 최신 항목이 위로 (date 내림차순, stable). */
+export function sortChangeLogDesc(items: ChangeLogEntry[]): ChangeLogEntry[] {
+  return [...items].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
 /**

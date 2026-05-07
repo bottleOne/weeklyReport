@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeRiskScore,
+  createChangeLogEntry,
   createEmptyOpenQuestion,
   createEmptyPlan,
   createEmptyRisk,
@@ -11,10 +12,12 @@ import {
   generatePlanFileName,
   legacyRisksTextToItems,
   legacyStakeholdersTextToItems,
+  sortChangeLogDesc,
   sortOpenQuestions,
   sortRisksByScore,
   sortScheduleEntriesByStart,
   TASK_STATUS_LABEL,
+  type ChangeLogEntry,
   type OpenQuestionItem,
   type ProjectPlanData,
   type PlanScheduleEntry,
@@ -79,6 +82,20 @@ describe("createEmpty* factories", () => {
     expect(s.responsibility).toBe("contributor");
   });
 
+  it("createEmptyPlan defaults status='draft' and empty changeLog (Phase 5)", () => {
+    const p = createEmptyPlan();
+    expect(p.status).toBe("draft");
+    expect(p.changeLog).toEqual([]);
+  });
+
+  it("createChangeLogEntry generates id and uses today's date", () => {
+    const e = createChangeLogEntry("전병일", "검토 완료");
+    expect(e.id).toBeTruthy();
+    expect(e.author).toBe("전병일");
+    expect(e.summary).toBe("검토 완료");
+    expect(e.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it("createEmptyOpenQuestion defaults to unresolved with blank fields", () => {
     const q = createEmptyOpenQuestion();
     expect(q.id).toBeTruthy();
@@ -132,6 +149,8 @@ describe("generatePlanFileName", () => {
     objective: "",
     scope: "",
     deliverables: "",
+    status: "draft",
+    changeLog: [],
     nonGoals: "",
     openQuestions: [],
     northStar: "",
@@ -257,6 +276,32 @@ describe("Risk helpers (Phase 3)", () => {
         expect(item.mitigation).toBe("");
       }
     });
+  });
+});
+
+describe("ChangeLog helpers (Phase 5)", () => {
+  const e = (id: string, date: string): ChangeLogEntry => ({
+    id,
+    date,
+    author: "tester",
+    summary: id,
+  });
+
+  it("sortChangeLogDesc orders by date descending (stable on tie)", () => {
+    const sorted = sortChangeLogDesc([
+      e("a", "2026-01-01"),
+      e("b", "2026-03-15"),
+      e("c", "2026-02-10"),
+      e("d", "2026-03-15"),
+    ]);
+    expect(sorted.map((x) => x.id)).toEqual(["b", "d", "c", "a"]);
+  });
+
+  it("sortChangeLogDesc does not mutate input", () => {
+    const items = [e("a", "2026-01-01"), e("b", "2026-03-15")];
+    const copy = [...items];
+    sortChangeLogDesc(items);
+    expect(items).toEqual(copy);
   });
 });
 

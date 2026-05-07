@@ -6,12 +6,15 @@ import type {
   SuccessMetric,
   RiskItem,
   Stakeholder,
+  ChangeLogEntry,
 } from "@/lib/plan-types";
 import {
   TASK_STATUS_LABEL,
   RISK_LEVEL_LABEL,
   RESPONSIBILITY_LABEL,
+  PLAN_STATUS_LABEL,
   computeRiskScore,
+  sortChangeLogDesc,
   sortOpenQuestions,
   sortRisksByScore,
   sortScheduleEntriesByStart,
@@ -41,10 +44,15 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
       id="plan-preview-content"
       className="mx-auto w-full max-w-[900px] rounded-xl border border-gray-200 bg-white p-10 text-sm text-gray-800"
     >
-      <h1 className="mb-2 text-center text-2xl font-extrabold">{data.title || "(제목 미입력)"}</h1>
+      <h1
+        className={`mb-2 text-center text-2xl font-extrabold ${data.status === "archived" ? "text-gray-400 line-through" : ""}`}
+      >
+        {data.title || "(제목 미입력)"}
+      </h1>
       <p className="mb-6 text-center text-xs text-gray-500">
         프로젝트 기획서 · {data.teamName || "팀"} · 작성자 {data.authorName || "이름"} · 작성일{" "}
-        {data.createdDate}
+        {data.createdDate} · 상태{" "}
+        <span className="font-semibold text-gray-700">{PLAN_STATUS_LABEL[data.status]}</span>
       </p>
 
       <Section title="이해관계자">
@@ -110,6 +118,11 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
         <RisksBlock items={data.risks} />
       </Section>
       <Section title="9. 기타">{paragraph(data.etc)}</Section>
+      {data.changeLog.length > 0 && (
+        <Section title="변경 이력">
+          <ChangeLogBlock items={data.changeLog} />
+        </Section>
+      )}
     </div>
   );
 }
@@ -120,6 +133,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-2 border-b border-gray-200 pb-1 text-base font-bold">{title}</h2>
       <div className="pl-2">{children}</div>
     </div>
+  );
+}
+
+function ChangeLogBlock({ items }: { items: ChangeLogEntry[] }) {
+  const sorted = sortChangeLogDesc(items);
+  return (
+    <table className="w-full table-fixed border-collapse text-xs">
+      <thead>
+        <tr className="border-b-2 border-gray-300 text-left">
+          <th className="w-24 py-2 pr-2 text-gray-500">날짜</th>
+          <th className="w-24 py-2 pr-2 text-gray-500">작성자</th>
+          <th className="py-2 text-gray-500">변경 요약</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((e) => (
+          <tr key={e.id} className="border-b border-gray-100 align-top">
+            <td className="py-2 pr-2 font-mono text-gray-500">{e.date}</td>
+            <td className="py-2 pr-2 font-semibold">{e.author || "-"}</td>
+            <td className="py-2 leading-relaxed">{e.summary || "-"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
