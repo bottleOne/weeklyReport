@@ -11,7 +11,7 @@ const sample: ProjectPlanData = {
   background: "현행 권한 체계의 한계",
   objective: "권한 관리 표준화",
   scope: "포함: 권한 모델",
-  stakeholders: "기획팀, 보안팀",
+  stakeholders: [{ id: "s1", name: "전병일", role: "PM", responsibility: "owner" }],
   deliverables: "설계서, API, UI",
   nonGoals: "외부 SSO 통합",
   openQuestions: [{ id: "q1", question: "외부 SSO 적용 시기는?", resolved: false, resolution: "" }],
@@ -63,18 +63,27 @@ describe("generatePlanDocxBuffer", () => {
     expect(buffer.length).toBeGreaterThan(1000);
   });
 
-  it("includes title, metadata, and renumbered section headings", async () => {
+  it("includes title, metadata, and renumbered section headings (Phase 4)", async () => {
     const buffer = await generatePlanDocxBuffer(sample);
     const xml = await extractDocumentXml(buffer);
     expect(xml).toContain("비즈메카 인사 모듈 개편");
     expect(xml).toContain("개발2팀");
     expect(xml).toContain("전병일");
+    expect(xml).toContain("이해관계자"); // 헤더 영역 (번호 없음)
     expect(xml).toContain("1. 배경 / 필요성");
-    expect(xml).toContain("6. 범위 외 (Non-goals)");
-    expect(xml).toContain("7. 미결사항");
-    expect(xml).toContain("8. 일정");
-    expect(xml).toContain("9. 리스크");
-    expect(xml).toContain("10. 기타");
+    expect(xml).toContain("4. 산출물");
+    expect(xml).toContain("5. 범위 외 (Non-goals)");
+    expect(xml).toContain("6. 미결사항");
+    expect(xml).toContain("7. 일정");
+    expect(xml).toContain("8. 리스크");
+    expect(xml).toContain("9. 기타");
+  });
+
+  it("renders stakeholders table", async () => {
+    const buffer = await generatePlanDocxBuffer(sample);
+    const xml = await extractDocumentXml(buffer);
+    expect(xml).toContain("PM");
+    expect(xml).toContain("오너");
   });
 
   it("renders open questions with checkbox glyph", async () => {

@@ -18,10 +18,12 @@ import type {
   OpenQuestionItem,
   SuccessMetric,
   RiskItem,
+  Stakeholder,
 } from "./plan-types";
 import {
   TASK_STATUS_LABEL,
   RISK_LEVEL_LABEL,
+  RESPONSIBILITY_LABEL,
   computeRiskScore,
   sortOpenQuestions,
   sortRisksByScore,
@@ -105,6 +107,46 @@ function cell(
           children: [makeText(line, { bold: opts?.bold ?? false })],
         })
     ),
+  });
+}
+
+function buildStakeholdersTable(items: Stakeholder[]): Table {
+  const COL_NAME = 2400;
+  const COL_ROLE = 3000;
+  const COL_RESP = 1800;
+  const TOTAL = COL_NAME + COL_ROLE + COL_RESP;
+
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: [
+      cell("이름", COL_NAME, { bold: true, align: AlignmentType.CENTER }),
+      cell("역할", COL_ROLE, { bold: true, align: AlignmentType.CENTER }),
+      cell("책임", COL_RESP, { bold: true, align: AlignmentType.CENTER }),
+    ],
+  });
+
+  const dataRows: TableRow[] = items.length
+    ? items.map(
+        (s) =>
+          new TableRow({
+            children: [
+              cell(s.name || "-", COL_NAME, { bold: true }),
+              cell(s.role || "-", COL_ROLE),
+              cell(RESPONSIBILITY_LABEL[s.responsibility], COL_RESP, {
+                align: AlignmentType.CENTER,
+              }),
+            ],
+          })
+      )
+    : [
+        new TableRow({
+          children: [cell("(등록된 이해관계자 없음)", TOTAL, { align: AlignmentType.CENTER })],
+        }),
+      ];
+
+  return new Table({
+    width: { size: TOTAL, type: WidthType.DXA },
+    rows: [headerRow, ...dataRows],
   });
 }
 
@@ -280,7 +322,11 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
     })
   );
 
-  // North Star + 성공 지표 — 본문 번호 외 헤더 영역
+  // 헤더 영역: 이해관계자 + North Star + 성공 지표 (본문 번호 외)
+  children.push(heading("이해관계자"));
+  children.push(buildStakeholdersTable(data.stakeholders));
+  children.push(paragraph(""));
+
   if (data.northStar.trim()) {
     children.push(heading("🌟 North Star"));
     children.push(
@@ -305,30 +351,27 @@ export async function generatePlanDocxBuffer(data: ProjectPlanData): Promise<Buf
   children.push(heading("3. 범위"));
   children.push(...multilineParagraphs(data.scope));
 
-  children.push(heading("4. 이해관계자"));
-  children.push(...multilineParagraphs(data.stakeholders));
-
-  children.push(heading("5. 산출물"));
+  children.push(heading("4. 산출물"));
   children.push(...multilineParagraphs(data.deliverables));
 
-  children.push(heading("6. 범위 외 (Non-goals)"));
+  children.push(heading("5. 범위 외 (Non-goals)"));
   children.push(...multilineParagraphs(data.nonGoals));
 
-  children.push(heading("7. 미결사항"));
+  children.push(heading("6. 미결사항"));
   children.push(...openQuestionParagraphs(data.openQuestions));
 
   // 일정 (표)
   const totalRange =
     data.startDate || data.endDate ? ` (${data.startDate || ""} ~ ${data.endDate || ""})` : "";
-  children.push(heading(`8. 일정${totalRange}`));
+  children.push(heading(`7. 일정${totalRange}`));
   children.push(buildScheduleTable(sortScheduleEntriesByStart(data.scheduleEntries)));
   children.push(paragraph(""));
 
-  children.push(heading("9. 리스크"));
+  children.push(heading("8. 리스크"));
   children.push(buildRisksTable(sortRisksByScore(data.risks)));
   children.push(paragraph(""));
 
-  children.push(heading("10. 기타"));
+  children.push(heading("9. 기타"));
   children.push(...multilineParagraphs(data.etc));
 
   const doc = new Document({

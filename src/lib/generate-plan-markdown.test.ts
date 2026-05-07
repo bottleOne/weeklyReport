@@ -10,7 +10,10 @@ const sample: ProjectPlanData = {
   background: "현행 권한 체계의 한계.\nRBAC 도입 필요.",
   objective: "권한 관리 표준화",
   scope: "포함: 권한 모델 / 제외: 외부 SSO",
-  stakeholders: "기획팀, 보안팀",
+  stakeholders: [
+    { id: "s1", name: "전병일", role: "PM", responsibility: "owner" },
+    { id: "s2", name: "이OO", role: "백엔드", responsibility: "contributor" },
+  ],
   deliverables: "설계서, API, UI",
   nonGoals: "외부 SSO 통합\n모바일 전용 화면",
   openQuestions: [
@@ -87,18 +90,27 @@ describe("generatePlanMarkdown", () => {
     expect(md).toContain("출시 후 4주");
   });
 
-  it("renders all 10 sections in renumbered order", () => {
+  it("renders all sections in Phase 4 renumbered order (stakeholders out of body)", () => {
     const md = generatePlanMarkdown(sample);
+    expect(md).toContain("## 이해관계자"); // 헤더 영역, 번호 없음
     expect(md).toContain("## 1. 배경");
     expect(md).toContain("## 2. 목표");
     expect(md).toContain("## 3. 범위");
-    expect(md).toContain("## 4. 이해관계자");
-    expect(md).toContain("## 5. 산출물");
-    expect(md).toContain("## 6. 범위 외 (Non-goals)");
-    expect(md).toContain("## 7. 미결사항");
-    expect(md).toContain("## 8. 일정");
-    expect(md).toContain("## 9. 리스크");
-    expect(md).toContain("## 10. 기타");
+    expect(md).toContain("## 4. 산출물");
+    expect(md).toContain("## 5. 범위 외 (Non-goals)");
+    expect(md).toContain("## 6. 미결사항");
+    expect(md).toContain("## 7. 일정");
+    expect(md).toContain("## 8. 리스크");
+    expect(md).toContain("## 9. 기타");
+  });
+
+  it("renders stakeholders table with name/role/responsibility", () => {
+    const md = generatePlanMarkdown(sample);
+    expect(md).toContain("| 이름 | 역할 | 책임 |");
+    expect(md).toContain("전병일");
+    expect(md).toContain("PM");
+    expect(md).toContain("오너");
+    expect(md).toContain("기여자");
   });
 
   it("renders risks table sorted by score descending with Korean labels", () => {

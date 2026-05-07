@@ -5,10 +5,12 @@ import {
   createEmptyPlan,
   createEmptyRisk,
   createEmptyScheduleEntry,
+  createEmptyStakeholder,
   createEmptySuccessMetric,
   createScheduleEntryFromRange,
   generatePlanFileName,
   legacyRisksTextToItems,
+  legacyStakeholdersTextToItems,
   sortOpenQuestions,
   sortRisksByScore,
   sortScheduleEntriesByStart,
@@ -64,6 +66,19 @@ describe("createEmpty* factories", () => {
     expect(r.mitigation).toBe("");
   });
 
+  it("createEmptyPlan exposes stakeholders as empty array (Phase 4)", () => {
+    const p = createEmptyPlan();
+    expect(p.stakeholders).toEqual([]);
+  });
+
+  it("createEmptyStakeholder defaults to contributor with blank text", () => {
+    const s = createEmptyStakeholder();
+    expect(s.id).toBeTruthy();
+    expect(s.name).toBe("");
+    expect(s.role).toBe("");
+    expect(s.responsibility).toBe("contributor");
+  });
+
   it("createEmptyOpenQuestion defaults to unresolved with blank fields", () => {
     const q = createEmptyOpenQuestion();
     expect(q.id).toBeTruthy();
@@ -112,10 +127,10 @@ describe("generatePlanFileName", () => {
     authorName: "전병일",
     teamName: "개발2팀",
     createdDate: "2026-04-25",
+    stakeholders: [],
     background: "",
     objective: "",
     scope: "",
-    stakeholders: "",
     deliverables: "",
     nonGoals: "",
     openQuestions: [],
@@ -240,6 +255,30 @@ describe("Risk helpers (Phase 3)", () => {
         expect(item.impact).toBe("medium");
         expect(item.likelihood).toBe("medium");
         expect(item.mitigation).toBe("");
+      }
+    });
+  });
+});
+
+describe("Stakeholder migration (Phase 4)", () => {
+  describe("legacyStakeholdersTextToItems", () => {
+    it("returns empty array for empty/whitespace string", () => {
+      expect(legacyStakeholdersTextToItems("")).toEqual([]);
+      expect(legacyStakeholdersTextToItems("   \n  \n")).toEqual([]);
+    });
+
+    it("splits by newline, trims, filters blanks", () => {
+      const out = legacyStakeholdersTextToItems("기획팀\n  보안팀  \n\n전병일 (PM)");
+      expect(out).toHaveLength(3);
+      expect(out.map((x) => x.name)).toEqual(["기획팀", "보안팀", "전병일 (PM)"]);
+    });
+
+    it("each migrated item has id, blank role, contributor responsibility", () => {
+      const out = legacyStakeholdersTextToItems("a\nb");
+      for (const item of out) {
+        expect(item.id).toBeTruthy();
+        expect(item.role).toBe("");
+        expect(item.responsibility).toBe("contributor");
       }
     });
   });

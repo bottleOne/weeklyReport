@@ -72,6 +72,26 @@ export interface RiskItem {
   mitigation: string;
 }
 
+/** 이해관계자 책임 (RACI lite). */
+export type Responsibility = "owner" | "contributor" | "reviewer" | "informed";
+
+export const RESPONSIBILITY_LABEL: Record<Responsibility, string> = {
+  owner: "오너",
+  contributor: "기여자",
+  reviewer: "리뷰어",
+  informed: "참고",
+};
+
+/**
+ * 이해관계자 — 자유서술 대신 구조화. 일정 entry assignee와 자동완성 연동.
+ */
+export interface Stakeholder {
+  id: string;
+  name: string;
+  role: string;
+  responsibility: Responsibility;
+}
+
 export interface ProjectPlanData {
   // 기본 정보
   title: string;
@@ -79,11 +99,13 @@ export interface ProjectPlanData {
   teamName: string;
   createdDate: string;
 
+  // 이해관계자 (Phase 4에서 자유서술 → 구조화, 본문 4번에서 분리)
+  stakeholders: Stakeholder[];
+
   // 기획 본문
   background: string;
   objective: string;
   scope: string;
-  stakeholders: string;
   deliverables: string;
 
   // 범위 외 + 미결사항 (Phase 1)
@@ -134,10 +156,10 @@ export function createEmptyPlan(): ProjectPlanData {
     authorName: "",
     teamName: "",
     createdDate: getTodayLocal(),
+    stakeholders: [],
     background: "",
     objective: "",
     scope: "",
-    stakeholders: "",
     deliverables: "",
     nonGoals: "",
     openQuestions: [],
@@ -207,6 +229,34 @@ export function legacyRisksTextToItems(text: string): RiskItem[] {
       impact: "medium" as const,
       likelihood: "medium" as const,
       mitigation: "",
+    }));
+}
+
+export function createEmptyStakeholder(): Stakeholder {
+  return {
+    id: newId(),
+    name: "",
+    role: "",
+    responsibility: "contributor",
+  };
+}
+
+/**
+ * Phase 4 마이그레이션 — v2 legacy `stakeholders: string`을 `Stakeholder[]`로 변환.
+ * 한 줄에 한 사람으로 split, 빈 줄 제외. 줄을 통째로 name에 넣고
+ * role 빈 값, responsibility는 contributor 기본.
+ */
+export function legacyStakeholdersTextToItems(text: string): Stakeholder[] {
+  if (!text || !text.trim()) return [];
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((name) => ({
+      id: newId(),
+      name,
+      role: "",
+      responsibility: "contributor" as const,
     }));
 }
 

@@ -11,6 +11,8 @@ interface PlanScheduleEntryCardProps {
   onChange: (id: string, field: keyof PlanScheduleEntry, value: string) => void;
   onRemove: (id: string) => void;
   onHover: (id: string | null) => void;
+  /** 담당자 input 자동완성 옵션 — Phase 4에서 stakeholders 이름 목록을 전달. */
+  assigneeOptions?: string[];
 }
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
@@ -26,7 +28,9 @@ export default function PlanScheduleEntryCard({
   onChange,
   onRemove,
   onHover,
+  assigneeOptions,
 }: PlanScheduleEntryCardProps) {
+  const datalistId = `assignee-options-${entry.id}`;
   const range =
     formatDateRange({ dateFrom: entry.dateFrom, dateTo: entry.dateTo }) || "(기간 미정)";
 
@@ -106,8 +110,16 @@ export default function PlanScheduleEntryCard({
             placeholder="예: 전병일"
             value={entry.assignee}
             onChange={(e) => onChange(entry.id, "assignee", e.target.value)}
+            list={assigneeOptions && assigneeOptions.length > 0 ? datalistId : undefined}
             className="w-full rounded-md border border-gray-200 p-2 text-sm outline-none focus:border-indigo-500"
           />
+          {assigneeOptions && assigneeOptions.length > 0 && (
+            <datalist id={datalistId}>
+              {assigneeOptions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          )}
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-gray-700">상태</label>

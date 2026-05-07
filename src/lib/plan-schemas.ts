@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { legacyRisksTextToItems } from "./plan-types";
+import { legacyRisksTextToItems, legacyStakeholdersTextToItems } from "./plan-types";
 
 /**
  * 프로젝트 기획서 도메인 zod 스키마.
@@ -8,6 +8,7 @@ import { legacyRisksTextToItems } from "./plan-types";
 
 export const TaskStatusSchema = z.enum(["todo", "in_progress", "done", "blocked"]);
 export const RiskLevelSchema = z.enum(["low", "medium", "high"]);
+export const ResponsibilitySchema = z.enum(["owner", "contributor", "reviewer", "informed"]);
 
 export const PlanScheduleEntrySchema = z.object({
   id: z.string(),
@@ -42,6 +43,13 @@ export const RiskItemSchema = z.object({
   mitigation: z.string(),
 });
 
+export const StakeholderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  role: z.string(),
+  responsibility: ResponsibilitySchema,
+});
+
 /**
  * Phase 3 마이그레이션 — v2 legacy `risks: string`을 `RiskItem[]`로 자동 변환.
  * preprocess 단계에서 string이면 한 줄당 한 risk로 split (medium/medium 기본),
@@ -52,6 +60,15 @@ const RisksField = z.preprocess((val) => {
   return val;
 }, z.array(RiskItemSchema).default([]));
 
+/**
+ * Phase 4 마이그레이션 — v2/v3 legacy `stakeholders: string`을 `Stakeholder[]`로 자동 변환.
+ * 한 줄당 한 사람, role 빈 값, responsibility는 contributor 기본.
+ */
+const StakeholdersField = z.preprocess((val) => {
+  if (typeof val === "string") return legacyStakeholdersTextToItems(val);
+  return val;
+}, z.array(StakeholderSchema).default([]));
+
 // Phase 1: nonGoals + openQuestions 도입.
 // Phase 2: northStar + successMetrics 도입.
 // v2 localStorage 호환을 위해 신규 필드는 default 값 부여 → 기존 사용자는 빈 값으로 부드럽게 마이그레이션.
@@ -60,10 +77,10 @@ export const ProjectPlanDataSchema = z.object({
   authorName: z.string(),
   teamName: z.string(),
   createdDate: z.string(),
+  stakeholders: StakeholdersField,
   background: z.string(),
   objective: z.string(),
   scope: z.string(),
-  stakeholders: z.string(),
   deliverables: z.string(),
   nonGoals: z.string().default(""),
   openQuestions: z.array(OpenQuestionItemSchema).default([]),

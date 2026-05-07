@@ -1,9 +1,16 @@
 "use client";
 
-import type { ProjectPlanData, OpenQuestionItem, SuccessMetric, RiskItem } from "@/lib/plan-types";
+import type {
+  ProjectPlanData,
+  OpenQuestionItem,
+  SuccessMetric,
+  RiskItem,
+  Stakeholder,
+} from "@/lib/plan-types";
 import {
   TASK_STATUS_LABEL,
   RISK_LEVEL_LABEL,
+  RESPONSIBILITY_LABEL,
   computeRiskScore,
   sortOpenQuestions,
   sortRisksByScore,
@@ -40,6 +47,10 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
         {data.createdDate}
       </p>
 
+      <Section title="이해관계자">
+        <StakeholdersBlock items={data.stakeholders} />
+      </Section>
+
       {data.northStar.trim() && (
         <div className="mb-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-center">
           <div className="mb-1 text-xs font-semibold tracking-wide text-indigo-600">
@@ -56,14 +67,13 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
       <Section title="1. 배경 / 필요성">{paragraph(data.background)}</Section>
       <Section title="2. 목표">{paragraph(data.objective)}</Section>
       <Section title="3. 범위">{paragraph(data.scope)}</Section>
-      <Section title="4. 이해관계자">{paragraph(data.stakeholders)}</Section>
-      <Section title="5. 산출물">{paragraph(data.deliverables)}</Section>
-      <Section title="6. 범위 외 (Non-goals)">{paragraph(data.nonGoals)}</Section>
-      <Section title="7. 미결사항">
+      <Section title="4. 산출물">{paragraph(data.deliverables)}</Section>
+      <Section title="5. 범위 외 (Non-goals)">{paragraph(data.nonGoals)}</Section>
+      <Section title="6. 미결사항">
         <OpenQuestionsBlock items={data.openQuestions} />
       </Section>
 
-      <Section title={`8. 일정 (${totalRange})`}>
+      <Section title={`7. 일정 (${totalRange})`}>
         {sorted.length === 0 ? (
           <span className="text-gray-400">(등록된 일정 없음)</span>
         ) : (
@@ -96,10 +106,10 @@ export default function PlanPreview({ data }: PlanPreviewProps) {
         )}
       </Section>
 
-      <Section title="9. 리스크">
+      <Section title="8. 리스크">
         <RisksBlock items={data.risks} />
       </Section>
-      <Section title="10. 기타">{paragraph(data.etc)}</Section>
+      <Section title="9. 기타">{paragraph(data.etc)}</Section>
     </div>
   );
 }
@@ -110,6 +120,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-2 border-b border-gray-200 pb-1 text-base font-bold">{title}</h2>
       <div className="pl-2">{children}</div>
     </div>
+  );
+}
+
+function StakeholdersBlock({ items }: { items: Stakeholder[] }) {
+  if (items.length === 0) return <span className="text-gray-400">(등록된 이해관계자 없음)</span>;
+  return (
+    <table className="w-full table-fixed border-collapse text-xs">
+      <thead>
+        <tr className="border-b-2 border-gray-300 text-left">
+          <th className="w-1/4 py-2 pr-2 text-gray-500">이름</th>
+          <th className="py-2 pr-2 text-gray-500">역할</th>
+          <th className="w-20 py-2 text-gray-500">책임</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((s) => (
+          <tr key={s.id} className="border-b border-gray-100 align-top">
+            <td className="py-2 pr-2 font-semibold">{s.name || "-"}</td>
+            <td className="py-2 pr-2">{s.role || "-"}</td>
+            <td className="py-2">{RESPONSIBILITY_LABEL[s.responsibility]}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

@@ -2,6 +2,7 @@ import type { ProjectPlanData } from "./plan-types";
 import {
   TASK_STATUS_LABEL,
   RISK_LEVEL_LABEL,
+  RESPONSIBILITY_LABEL,
   computeRiskScore,
   sortOpenQuestions,
   sortRisksByScore,
@@ -20,7 +21,9 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
   );
   lines.push("");
 
-  // North Star + 성공 지표 — 본문 번호 외 헤더 영역
+  // 헤더 영역: 이해관계자 + North Star + 성공 지표 (본문 번호 외)
+  pushStakeholders(lines, data);
+
   if (data.northStar.trim()) {
     lines.push("## 🌟 North Star");
     lines.push("");
@@ -48,14 +51,13 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
   pushSection(lines, "1. 배경 / 필요성", data.background);
   pushSection(lines, "2. 목표", data.objective);
   pushSection(lines, "3. 범위", data.scope);
-  pushSection(lines, "4. 이해관계자", data.stakeholders);
-  pushSection(lines, "5. 산출물", data.deliverables);
-  pushSection(lines, "6. 범위 외 (Non-goals)", data.nonGoals);
+  pushSection(lines, "4. 산출물", data.deliverables);
+  pushSection(lines, "5. 범위 외 (Non-goals)", data.nonGoals);
   pushOpenQuestions(lines, data);
 
   const totalRange =
     data.startDate || data.endDate ? ` (${data.startDate || ""} ~ ${data.endDate || ""})` : "";
-  lines.push(`## 8. 일정${totalRange}`);
+  lines.push(`## 7. 일정${totalRange}`);
   lines.push("");
 
   const sorted = sortScheduleEntriesByStart(data.scheduleEntries);
@@ -77,9 +79,26 @@ export function generatePlanMarkdown(data: ProjectPlanData): string {
   }
 
   pushRisks(lines, data);
-  pushSection(lines, "10. 기타", data.etc);
+  pushSection(lines, "9. 기타", data.etc);
 
   return lines.join("\n");
+}
+
+function pushStakeholders(lines: string[], data: ProjectPlanData): void {
+  lines.push("## 이해관계자");
+  lines.push("");
+  if (data.stakeholders.length === 0) {
+    lines.push("(등록된 이해관계자 없음)");
+    lines.push("");
+    return;
+  }
+  lines.push("| 이름 | 역할 | 책임 |");
+  lines.push("|---|---|---|");
+  const safe = (s: string) => s.replace(/\|/g, "\\|").trim() || "-";
+  for (const s of data.stakeholders) {
+    lines.push(`| ${safe(s.name)} | ${safe(s.role)} | ${RESPONSIBILITY_LABEL[s.responsibility]} |`);
+  }
+  lines.push("");
 }
 
 function pushSection(lines: string[], heading: string, body: string): void {
@@ -90,7 +109,7 @@ function pushSection(lines: string[], heading: string, body: string): void {
 }
 
 function pushRisks(lines: string[], data: ProjectPlanData): void {
-  lines.push("## 9. 리스크");
+  lines.push("## 8. 리스크");
   lines.push("");
   if (data.risks.length === 0) {
     lines.push("(미입력)");
@@ -109,7 +128,7 @@ function pushRisks(lines: string[], data: ProjectPlanData): void {
 }
 
 function pushOpenQuestions(lines: string[], data: ProjectPlanData): void {
-  lines.push("## 7. 미결사항");
+  lines.push("## 6. 미결사항");
   lines.push("");
   if (data.openQuestions.length === 0) {
     lines.push("(미입력)");

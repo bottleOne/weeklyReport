@@ -8,12 +8,14 @@ import type {
   OpenQuestionItem,
   SuccessMetric,
   RiskItem,
+  Stakeholder,
 } from "@/lib/plan-types";
 import {
   createEmptyPlan,
   createEmptyOpenQuestion,
   createEmptySuccessMetric,
   createEmptyRisk,
+  createEmptyStakeholder,
   createScheduleEntryFromRange,
   generatePlanFileName,
 } from "@/lib/plan-types";
@@ -27,6 +29,7 @@ import PlanOpenQuestionsSection from "@/components/plan/PlanOpenQuestionsSection
 import PlanNorthStarCard from "@/components/plan/PlanNorthStarCard";
 import PlanMetricsSection from "@/components/plan/PlanMetricsSection";
 import PlanRisksSection from "@/components/plan/PlanRisksSection";
+import PlanStakeholdersSection from "@/components/plan/PlanStakeholdersSection";
 import PlanScheduleCalendar from "@/components/plan/PlanScheduleCalendar";
 import PlanScheduleEntryCard from "@/components/plan/PlanScheduleEntryCard";
 import PlanPreview from "@/components/plan/PlanPreview";
@@ -35,12 +38,12 @@ const STORAGE_KEY = "weeklyReport:planFormState:v2";
 type DownloadType = "docx" | "pdf" | "md" | null;
 type PlanTab = "plan" | "schedule";
 
+// Phase 4 이후: 이해관계자는 헤더 영역(별도 카드)으로 빠짐. 본문은 4섹션.
 const TEXT_FIELDS: { key: keyof ProjectPlanData; label: string; placeholder: string }[] = [
   { key: "background", label: "1. 배경 / 필요성", placeholder: "왜 이 프로젝트가 필요한가" },
   { key: "objective", label: "2. 목표", placeholder: "정량/정성 목표" },
   { key: "scope", label: "3. 범위", placeholder: "포함 / 제외 범위" },
-  { key: "stakeholders", label: "4. 이해관계자", placeholder: "사용자, 결정권자, 협업팀" },
-  { key: "deliverables", label: "5. 산출물", placeholder: "최종 결과물 목록" },
+  { key: "deliverables", label: "4. 산출물", placeholder: "최종 결과물 목록" },
 ];
 
 const NAV_ITEMS: { key: PlanTab; label: string; icon: string; desc: string }[] = [
@@ -87,6 +90,8 @@ export default function PlanPage() {
   const [focusMetricId, setFocusMetricId] = useState<string | null>(null);
   // 새로 추가된 risk id — 마운트 시 description textarea 자동 focus.
   const [focusRiskId, setFocusRiskId] = useState<string | null>(null);
+  // 새로 추가된 stakeholder id — 마운트 시 name input 자동 focus.
+  const [focusStakeholderId, setFocusStakeholderId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [downloading, setDownloading] = useState<DownloadType>(null);
 
@@ -222,6 +227,32 @@ export default function PlanPage() {
       risks: prev.risks.filter((r) => r.id !== id),
     }));
   }, []);
+
+  // ===== 이해관계자 (Stakeholders) =====
+  const addStakeholder = useCallback(() => {
+    const item = createEmptyStakeholder();
+    setPlan((prev) => ({ ...prev, stakeholders: [...prev.stakeholders, item] }));
+    setFocusStakeholderId(item.id);
+  }, []);
+
+  const updateStakeholder = useCallback((id: string, patch: Partial<Stakeholder>) => {
+    setPlan((prev) => ({
+      ...prev,
+      stakeholders: prev.stakeholders.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    }));
+  }, []);
+
+  const removeStakeholder = useCallback((id: string) => {
+    setPlan((prev) => ({
+      ...prev,
+      stakeholders: prev.stakeholders.filter((s) => s.id !== id),
+    }));
+  }, []);
+
+  // 일정 entry assignee input의 datalist 옵션 — stakeholder 이름 중 비지 않은 것만
+  const assigneeOptions = plan.stakeholders
+    .map((s) => s.name.trim())
+    .filter((name) => name.length > 0);
 
   const resetForm = () => {
     toast("모든 입력 내용을 초기화하시겠습니까?", {
@@ -444,6 +475,14 @@ export default function PlanPage() {
                   )
                 }
               />
+              <PlanStakeholdersSection
+                items={plan.stakeholders}
+                onAdd={addStakeholder}
+                onChange={updateStakeholder}
+                onRemove={removeStakeholder}
+                focusId={focusStakeholderId}
+                onFocused={() => setFocusStakeholderId(null)}
+              />
               <PlanNorthStarCard
                 value={plan.northStar}
                 onChange={(value) => updateField("northStar", value)}
@@ -568,6 +607,7 @@ export default function PlanPage() {
                               onChange={updateEntry}
                               onRemove={removeEntry}
                               onHover={setHighlightedEntryId}
+                              assigneeOptions={assigneeOptions}
                             />
                           ) : (
                             <p className="py-16 text-center text-sm text-gray-400">
@@ -631,6 +671,7 @@ export default function PlanPage() {
                                   onChange={updateEntry}
                                   onRemove={removeEntry}
                                   onHover={setHighlightedEntryId}
+                                  assigneeOptions={assigneeOptions}
                                 />
                               ))}
                             </div>

@@ -13,7 +13,8 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
       background: "",
       objective: "",
       scope: "",
-      stakeholders: "",
+      // Phase 4 이전: stakeholders는 string
+      stakeholders: "기획팀\n보안팀\n전병일",
       deliverables: "",
       startDate: "",
       endDate: "",
@@ -32,6 +33,11 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
     expect(parsed.risks).toHaveLength(2);
     expect(parsed.risks[0].description).toBe("외부 API 지연");
     expect(parsed.risks[0].impact).toBe("medium");
+    // Phase 4 마이그레이션: stakeholders string → Stakeholder[]
+    expect(Array.isArray(parsed.stakeholders)).toBe(true);
+    expect(parsed.stakeholders).toHaveLength(3);
+    expect(parsed.stakeholders[0].name).toBe("기획팀");
+    expect(parsed.stakeholders[0].responsibility).toBe("contributor");
   });
 
   it("preserves provided nonGoals and openQuestions when present", () => {
@@ -43,7 +49,7 @@ describe("ProjectPlanDataSchema — Phase 1 backward compatibility", () => {
       background: "",
       objective: "",
       scope: "",
-      stakeholders: "",
+      stakeholders: [],
       deliverables: "",
       nonGoals: "예: 모바일 미지원",
       openQuestions: [
@@ -79,7 +85,7 @@ describe("ProjectPlanDataSchema — Phase 3 risks migration & v3 raw", () => {
     background: "",
     objective: "",
     scope: "",
-    stakeholders: "",
+    stakeholders: [],
     deliverables: "",
     nonGoals: "",
     openQuestions: [],
@@ -113,6 +119,54 @@ describe("ProjectPlanDataSchema — Phase 3 risks migration & v3 raw", () => {
   it("treats missing risks field as empty array (default)", () => {
     const parsed = ProjectPlanDataSchema.parse(baseV3);
     expect(parsed.risks).toEqual([]);
+  });
+});
+
+describe("ProjectPlanDataSchema — Phase 4 stakeholders migration & raw", () => {
+  const base = {
+    title: "",
+    authorName: "",
+    teamName: "",
+    createdDate: "2026-05-07",
+    background: "",
+    objective: "",
+    scope: "",
+    deliverables: "",
+    nonGoals: "",
+    openQuestions: [],
+    northStar: "",
+    successMetrics: [],
+    startDate: "",
+    endDate: "",
+    scheduleEntries: [],
+    etc: "",
+  };
+
+  it("accepts raw stakeholders array as-is", () => {
+    const payload = {
+      ...base,
+      stakeholders: [
+        { id: "s1", name: "전병일", role: "PM", responsibility: "owner" },
+        { id: "s2", name: "이OO", role: "백엔드", responsibility: "contributor" },
+      ],
+    };
+    const parsed = ProjectPlanDataSchema.parse(payload);
+    expect(parsed.stakeholders).toHaveLength(2);
+    expect(parsed.stakeholders[0].responsibility).toBe("owner");
+  });
+
+  it("treats missing stakeholders field as empty array (default)", () => {
+    const parsed = ProjectPlanDataSchema.parse(base);
+    expect(parsed.stakeholders).toEqual([]);
+  });
+
+  it("auto-migrates legacy string stakeholders to array", () => {
+    const payload = { ...base, stakeholders: "기획팀\n보안팀" };
+    const parsed = ProjectPlanDataSchema.parse(payload);
+    expect(parsed.stakeholders).toHaveLength(2);
+    expect(parsed.stakeholders[0].name).toBe("기획팀");
+    expect(parsed.stakeholders[1].name).toBe("보안팀");
+    expect(parsed.stakeholders[0].responsibility).toBe("contributor");
   });
 });
 
