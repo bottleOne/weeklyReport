@@ -35,6 +35,7 @@ import PlanRisksSection from "@/components/plan/PlanRisksSection";
 import PlanStakeholdersSection from "@/components/plan/PlanStakeholdersSection";
 import PlanStatusBar from "@/components/plan/PlanStatusBar";
 import PlanChangeLogSection from "@/components/plan/PlanChangeLogSection";
+import PlanToc, { type PlanTocItem } from "@/components/plan/PlanToc";
 import PlanScheduleCalendar from "@/components/plan/PlanScheduleCalendar";
 import PlanScheduleEntryCard from "@/components/plan/PlanScheduleEntryCard";
 import PlanPreview from "@/components/plan/PlanPreview";
@@ -44,16 +45,50 @@ type DownloadType = "docx" | "pdf" | "md" | null;
 type PlanTab = "plan" | "schedule";
 
 // Phase 4 이후: 이해관계자는 헤더 영역(별도 카드)으로 빠짐. 본문은 4섹션.
+// placeholder는 빈 폼 진입 시 작성 마찰을 줄이기 위해 구체 예시로 — Phase 6.
 const TEXT_FIELDS: { key: keyof ProjectPlanData; label: string; placeholder: string }[] = [
-  { key: "background", label: "1. 배경 / 필요성", placeholder: "왜 이 프로젝트가 필요한가" },
-  { key: "objective", label: "2. 목표", placeholder: "정량/정성 목표" },
-  { key: "scope", label: "3. 범위", placeholder: "포함 / 제외 범위" },
-  { key: "deliverables", label: "4. 산출물", placeholder: "최종 결과물 목록" },
+  {
+    key: "background",
+    label: "1. 배경 / 필요성",
+    placeholder:
+      "예: 매주 보고서 작성에 평균 2시간 소요. 양식이 부서마다 달라 일관성 부족, 데이터 재가공도 반복됨.",
+  },
+  {
+    key: "objective",
+    label: "2. 목표",
+    placeholder:
+      "예: 보고서 작성 시간 평균 30분 이하로 단축\n- 표준 양식 1종 적용\n- 자동저장 + 다양한 포맷 다운로드",
+  },
+  {
+    key: "scope",
+    label: "3. 범위",
+    placeholder:
+      "포함: 주간보고서 작성/출력, 기획서 작성/출력, 일정 관리\n제외: 외부 인사 시스템 연동, 모바일 전용 화면",
+  },
+  {
+    key: "deliverables",
+    label: "4. 산출물",
+    placeholder: "예: 설계서, REST API 명세서, 관리자/사용자 UI, 사용자 가이드 문서",
+  },
 ];
 
 const NAV_ITEMS: { key: PlanTab; label: string; icon: string; desc: string }[] = [
   { key: "plan", label: "기획서", icon: "📋", desc: "전체 기획 본문" },
   { key: "schedule", label: "일정 관리", icon: "📅", desc: "달력 + 세부 일정" },
+];
+
+// Phase 6 — 우측 sticky ToC 항목. 각 id는 page.tsx 안의 <section id="..."> 와 일치.
+const TOC_ITEMS: PlanTocItem[] = [
+  { id: "toc-info", label: "정보" },
+  { id: "toc-stakeholders", label: "이해관계자" },
+  { id: "toc-northstar", label: "🌟 North Star" },
+  { id: "toc-metrics", label: "성공 지표" },
+  { id: "toc-body", label: "본문 (1~4)" },
+  { id: "toc-nongoals", label: "범위 외" },
+  { id: "toc-openquestions", label: "미결사항" },
+  { id: "toc-risks", label: "리스크" },
+  { id: "toc-etc", label: "기타" },
+  { id: "toc-changelog", label: "변경 이력" },
 ];
 
 /** Date → YYYY-MM-DD (로컬 자정 기준). */
@@ -498,92 +533,115 @@ export default function PlanPage() {
         {/* 메인: 모드별 콘텐츠 */}
         <section className="min-w-0 flex-1">
           {activeTab === "plan" && (
-            <div className="space-y-4">
-              <PlanInfoSection
-                title={plan.title}
-                teamName={plan.teamName}
-                authorName={plan.authorName}
-                createdDate={plan.createdDate}
-                startDate={plan.startDate}
-                endDate={plan.endDate}
-                onChange={(field, value) =>
-                  updateField(
-                    field as keyof ProjectPlanData,
-                    value as ProjectPlanData[keyof ProjectPlanData]
-                  )
-                }
-              />
-              <PlanStakeholdersSection
-                items={plan.stakeholders}
-                onAdd={addStakeholder}
-                onChange={updateStakeholder}
-                onRemove={removeStakeholder}
-                focusId={focusStakeholderId}
-                onFocused={() => setFocusStakeholderId(null)}
-              />
-              <PlanNorthStarCard
-                value={plan.northStar}
-                onChange={(value) => updateField("northStar", value)}
-              />
-              <PlanMetricsSection
-                items={plan.successMetrics}
-                onAdd={addMetric}
-                onChange={updateMetric}
-                onRemove={removeMetric}
-                focusId={focusMetricId}
-                onFocused={() => setFocusMetricId(null)}
-              />
-              <PlanTextSection
-                fields={TEXT_FIELDS.map((f) => ({
-                  key: f.key,
-                  label: f.label,
-                  placeholder: f.placeholder,
-                  value: plan[f.key] as string,
-                }))}
-                onChange={(key, value) =>
-                  updateField(
-                    key as keyof ProjectPlanData,
-                    value as ProjectPlanData[keyof ProjectPlanData]
-                  )
-                }
-              />
-              <PlanNonGoalsSection
-                value={plan.nonGoals}
-                onChange={(value) => updateField("nonGoals", value)}
-              />
-              <PlanOpenQuestionsSection
-                items={plan.openQuestions}
-                onAdd={addOpenQuestion}
-                onChange={updateOpenQuestion}
-                onRemove={removeOpenQuestion}
-                focusId={focusOpenQuestionId}
-                onFocused={() => setFocusOpenQuestionId(null)}
-              />
-              <PlanRisksSection
-                items={plan.risks}
-                onAdd={addRisk}
-                onChange={updateRisk}
-                onRemove={removeRisk}
-                focusId={focusRiskId}
-                onFocused={() => setFocusRiskId(null)}
-              />
-              <div className="rounded-xl border border-gray-200 bg-white p-5">
-                <div className="mb-3 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
-                  📝 기타
-                </div>
-                <textarea
-                  placeholder="기타 사항"
-                  value={plan.etc}
-                  onChange={(e) => updateField("etc", e.target.value)}
-                  className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
-                />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+              <div className="min-w-0 space-y-4">
+                <section id="toc-info" className="scroll-mt-4">
+                  <PlanInfoSection
+                    title={plan.title}
+                    teamName={plan.teamName}
+                    authorName={plan.authorName}
+                    createdDate={plan.createdDate}
+                    startDate={plan.startDate}
+                    endDate={plan.endDate}
+                    onChange={(field, value) =>
+                      updateField(
+                        field as keyof ProjectPlanData,
+                        value as ProjectPlanData[keyof ProjectPlanData]
+                      )
+                    }
+                  />
+                </section>
+                <section id="toc-stakeholders" className="scroll-mt-4">
+                  <PlanStakeholdersSection
+                    items={plan.stakeholders}
+                    onAdd={addStakeholder}
+                    onChange={updateStakeholder}
+                    onRemove={removeStakeholder}
+                    focusId={focusStakeholderId}
+                    onFocused={() => setFocusStakeholderId(null)}
+                  />
+                </section>
+                <section id="toc-northstar" className="scroll-mt-4">
+                  <PlanNorthStarCard
+                    value={plan.northStar}
+                    onChange={(value) => updateField("northStar", value)}
+                  />
+                </section>
+                <section id="toc-metrics" className="scroll-mt-4">
+                  <PlanMetricsSection
+                    items={plan.successMetrics}
+                    onAdd={addMetric}
+                    onChange={updateMetric}
+                    onRemove={removeMetric}
+                    focusId={focusMetricId}
+                    onFocused={() => setFocusMetricId(null)}
+                  />
+                </section>
+                <section id="toc-body" className="scroll-mt-4">
+                  <PlanTextSection
+                    fields={TEXT_FIELDS.map((f) => ({
+                      key: f.key,
+                      label: f.label,
+                      placeholder: f.placeholder,
+                      value: plan[f.key] as string,
+                    }))}
+                    onChange={(key, value) =>
+                      updateField(
+                        key as keyof ProjectPlanData,
+                        value as ProjectPlanData[keyof ProjectPlanData]
+                      )
+                    }
+                  />
+                </section>
+                <section id="toc-nongoals" className="scroll-mt-4">
+                  <PlanNonGoalsSection
+                    value={plan.nonGoals}
+                    onChange={(value) => updateField("nonGoals", value)}
+                  />
+                </section>
+                <section id="toc-openquestions" className="scroll-mt-4">
+                  <PlanOpenQuestionsSection
+                    items={plan.openQuestions}
+                    onAdd={addOpenQuestion}
+                    onChange={updateOpenQuestion}
+                    onRemove={removeOpenQuestion}
+                    focusId={focusOpenQuestionId}
+                    onFocused={() => setFocusOpenQuestionId(null)}
+                  />
+                </section>
+                <section id="toc-risks" className="scroll-mt-4">
+                  <PlanRisksSection
+                    items={plan.risks}
+                    onAdd={addRisk}
+                    onChange={updateRisk}
+                    onRemove={removeRisk}
+                    focusId={focusRiskId}
+                    onFocused={() => setFocusRiskId(null)}
+                  />
+                </section>
+                <section id="toc-etc" className="scroll-mt-4">
+                  <div className="rounded-xl border border-gray-200 bg-white p-5">
+                    <div className="mb-3 flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-600">
+                      📝 기타
+                    </div>
+                    <textarea
+                      placeholder="예: 후속 phase 아이디어, 의존 프로젝트, 참고 문서 링크 등"
+                      value={plan.etc}
+                      onChange={(e) => updateField("etc", e.target.value)}
+                      className="min-h-[80px] w-full resize-y rounded-md border border-gray-200 p-2.5 text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </section>
+                <section id="toc-changelog" className="scroll-mt-4">
+                  <PlanChangeLogSection
+                    items={plan.changeLog}
+                    defaultAuthor={plan.authorName || ""}
+                    onAdd={addChangeLog}
+                    onRemove={removeChangeLog}
+                  />
+                </section>
               </div>
-              <PlanChangeLogSection
-                items={plan.changeLog}
-                defaultAuthor={plan.authorName || ""}
-                onAdd={addChangeLog}
-                onRemove={removeChangeLog}
-              />
+              <PlanToc items={TOC_ITEMS} />
             </div>
           )}
 
