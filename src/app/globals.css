@@ -6,6 +6,13 @@
   --primary-hover: #1648b8;
 }
 
+/* 기본 root font-size를 16 → 18px로 키움 (12% 확대).
+   Tailwind text-xs/text-sm/text-base 등이 모두 rem 기반이라 비례 확대됨.
+   모바일에서 input zoom-in(16px 미만 시) 방지 효과도 함께. */
+html {
+  font-size: 18px;
+}
+
 body {
   font-family:
     "Pretendard",
